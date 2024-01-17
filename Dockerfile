@@ -7,11 +7,13 @@ COPY package-lock.json .
 RUN npm ci
 COPY src/ src/
 RUN npm run build
+RUN npm prune --omit=dev
 
 FROM base as runner
 WORKDIR /app
 
 COPY --from=builder /app/out .
+COPY --from=builder /app/node_modules node_modules/
 
 RUN addgroup -S w3up-uploader-runners
 RUN adduser -S -G w3up-uploader-runners w3up-uploader-runner
@@ -30,4 +32,4 @@ ARG W3UP_DELEGATION_PROOF
 ENV W3UP_DELEGATION_PROOF=$W3UP_DELEGATION_PROOF
 
 EXPOSE $PORT
-ENTRYPOINT ["node", "index.js"]
+ENTRYPOINT ["node", "index.mjs"]

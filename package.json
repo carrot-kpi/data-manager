@@ -11,7 +11,7 @@
         "commitlint": "commitlint -e",
         "lint": "eslint --ext .js ./ && prettier --check './**/*.{json,md}'",
         "format": "eslint --fix --ext .js ./ && prettier --write './**/*.{json,md}'",
-        "build": "esbuild ./src/index.js --platform=node --define:process.env.NODE_ENV=\\\"production\\\" --bundle --minify --outdir=./out",
+        "build": "esbuild ./src/index.js --platform=node --format=esm --define:process.env.NODE_ENV=\\\"production\\\" --bundle --packages=external --minify --outdir=./out --out-extension:.js=.mjs",
         "start": "node src/index.js"
     },
     "devDependencies": {
