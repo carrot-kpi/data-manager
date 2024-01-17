@@ -1,11 +1,11 @@
 {
     "type": "module",
     "private": true,
-    "name": "@carrot-kpi/w3up-uploader",
+    "name": "@carrot-kpi/data-uploader",
     "version": "0.1.0",
     "author": "Federico Luzzi <federico.luzzi@carrot-labs.xyz>",
     "license": "GPL-3.0-or-later",
-    "description": "A service to facilitate data uploads to web3.storage through their w3up service.",
+    "description": "A service to facilitate data uploads to web3.storage through their w3up service and to a S3 service of choice.",
     "scripts": {
         "prepare": "node ./scripts/prepare.js",
         "commitlint": "commitlint -e",
@@ -30,6 +30,7 @@
         "prettier": "^3.2.4"
     },
     "dependencies": {
+        "@aws-sdk/client-s3": "^3.490.0",
         "@hapi/boom": "^10.0.1",
         "@hapi/hapi": "^21.3.2",
         "@ipld/car": "^5.2.6",
