@@ -36,10 +36,10 @@ Additionally, request validation is performed using `joi`.
 
 ## Testing the server
 
-Start by installing the dependencies using `npm`:
+Start by installing the dependencies using `pnpm`:
 
 ```
-npm install
+pnpm install
 ```
 
 Once the dependencies are installed, create a `.env` file at the root of the
@@ -64,7 +64,7 @@ Once the `.env` file has been created you can go ahead and start the server
 using the following command launched from the package's root:
 
 ```
-npm run start
+pnpm start
 ```
 
 Keep in mind that no automatic restart of the server's code on changes has been

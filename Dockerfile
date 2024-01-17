@@ -1,17 +1,28 @@
 FROM node:iron-alpine as base
-
-FROM base as builder
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+ENV SKIP_GIT_HOOKS_SETUP=true
+RUN corepack enable
 WORKDIR /app
+
+FROM base as prod-deps
 COPY package.json .
-COPY package-lock.json .
-RUN npm ci
+COPY pnpm-lock.yaml .
+COPY scripts/ scripts/
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-lockfile
+
+FROM base as build
+COPY package.json .
+COPY pnpm-lock.yaml .
+COPY scripts/ scripts/
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 COPY src/ src/
-RUN npm run build
+RUN pnpm build
 
 FROM base as runner
-WORKDIR /app
 
-COPY --from=builder /app/out .
+COPY --from=prod-deps /app/node_modules /app/node_modules
+COPY --from=build /app/out/index.mjs /app/index.mjs
 
 RUN addgroup -S w3up-uploader-runners
 RUN adduser -S -G w3up-uploader-runners w3up-uploader-runner
@@ -30,4 +41,4 @@ ARG W3UP_DELEGATION_PROOF
 ENV W3UP_DELEGATION_PROOF=$W3UP_DELEGATION_PROOF
 
 EXPOSE $PORT
-ENTRYPOINT ["node", "index.js"]
+ENTRYPOINT ["node", "index.mjs"]
