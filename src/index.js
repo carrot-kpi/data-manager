@@ -3,7 +3,7 @@ import { create as createW3UpClient } from "@web3-storage/w3up-client";
 import { parse as parsePrincipalKey } from "@ucanto/principal/ed25519";
 import { importDAG } from "@ucanto/core/delegation";
 import { CarReader } from "@ipld/car";
-import { getStoreRoute } from "./routes/store.js";
+import { getStoreJsonDataRoute } from "./routes/data/json.js";
 
 const DEV = process.env.NODE_ENV !== "production";
 
@@ -89,7 +89,7 @@ const start = async () => {
     }
     await server.register(serverPlugins);
 
-    server.route(await getStoreRoute({ w3UpClient }));
+    server.route(await getStoreJsonDataRoute({ w3UpClient }));
 
     try {
         await server.start();

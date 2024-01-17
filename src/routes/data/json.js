@@ -1,15 +1,14 @@
 import { badGateway } from "@hapi/boom";
+import joi from "joi";
 
 /**
  * @param {{ w3UpClient: import("@web3-storage/w3up-client").Client }} params
  * @returns {import("@hapi/hapi").ServerRoute}
  */
-export const getStoreRoute = async ({ w3UpClient }) => {
-    const { default: joi } = await import("joi");
-
+export const getStoreJsonDataRoute = async ({ w3UpClient }) => {
     return {
         method: "POST",
-        path: "/store",
+        path: "/data/json",
         options: {
             plugins: {
                 "hapi-swagger": {
@@ -33,35 +32,34 @@ export const getStoreRoute = async ({ w3UpClient }) => {
                     },
                 },
             },
-            description: "Store text-like data on web3.storage.",
-            notes: "Stores text-like data on web3.storage.",
+            description: "Stores JSON data on web3.storage.",
+            notes: "Stores JSON data on web3.storage through the w3up service.",
             tags: ["api"],
             payload: {
                 maxBytes: 1024, // 1kb
             },
             validate: {
                 payload: joi.object({
-                    content: joi
-                        .string()
-                        .regex(/^[A-Za-z0-9+/]*={0,2}$/)
+                    data: joi
+                        .object()
                         .required()
-                        .description("The base64-encoded text to store."),
+                        .description("The JSON object to store."),
                 }),
             },
         },
         handler: async (request, h) => {
-            /** @type {{ content: string }} */
+            /** @type {{ data: object }} */
             const payload = request.payload;
-            const { content: base64Content } = payload;
-            const content = Buffer.from(base64Content, "base64").toString();
+            const { data } = payload;
+            const content = Buffer.from(JSON.stringify(data)).toString();
+            const blob = new Blob([content]);
 
             let cid;
             try {
-                const blob = new Blob([content]);
                 cid = await w3UpClient.uploadFile(blob);
             } catch (error) {
-                request.logger.error(error, "Could not upload to web3.storage");
-                return badGateway("Could not upload file");
+                request.logger.error(error, "Could not upload data to w3up");
+                return badGateway("Could not upload data to w3up");
             }
 
             return h.response({ cid }).code(200);
