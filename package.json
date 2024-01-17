@@ -7,7 +7,7 @@
     "license": "GPL-3.0-or-later",
     "description": "A service to facilitate data uploads to web3.storage through their w3up service.",
     "scripts": {
-        "prepare": "husky install",
+        "prepare": "node ./scripts/prepare.js",
         "commitlint": "commitlint -e",
         "lint": "eslint --ext .js ./ && prettier --check './**/*.{json,md}'",
         "format": "eslint --fix --ext .js ./ && prettier --write './**/*.{json,md}'",
@@ -32,6 +32,9 @@
     "dependencies": {
         "@hapi/boom": "^10.0.1",
         "@hapi/hapi": "^21.3.2",
+        "@ipld/car": "^5.2.6",
+        "@ucanto/core": "^9.0.1",
+        "@ucanto/principal": "^9.0.0",
         "@web3-storage/w3up-client": "^12.0.0",
         "hapi-pino": "^12.1.0",
         "joi": "^17.11.1"
