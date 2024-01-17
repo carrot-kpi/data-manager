@@ -34,7 +34,7 @@ export const getW3UpClient = async ({ principalKey, delegationProof }) => {
 export const getS3Client = ({ endpoint, accessKeyId, secretAccessKey }) => {
     return new S3Client({
         forcePathStyle: false, // Configures to use subdomain/virtual calling format.
-        endpoint: endpoint,
+        endpoint,
         region: "us-east-1",
         credentials: {
             accessKeyId,
