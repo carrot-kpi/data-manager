@@ -1,6 +1,17 @@
 import { server as createServer } from "@hapi/hapi";
 import { getStoreJsonDataRoute } from "./routes/data/json.js";
-import { getS3Client, getW3UpClient } from "./utils.js";
+import {
+    getAuthenticationScheme,
+    getDbClient,
+    getS3Client,
+    getW3UpClient,
+} from "./utils.js";
+import HapiPinoPlugin from "hapi-pino";
+import HapiInertPlugin from "@hapi/inert";
+import HapiVisionPlugin from "@hapi/vision";
+import HapiSwaggerPlugin from "hapi-swagger";
+import { getLoginMessageRoute } from "./routes/login-message.js";
+import { getTokenRoute } from "./routes/token.js";
 
 const DEV = process.env.NODE_ENV !== "production";
 
@@ -27,6 +38,44 @@ const start = async () => {
             cors: true,
         },
     });
+    await server.register([
+        {
+            plugin: HapiPinoPlugin,
+            options: {
+                formatters: {
+                    level(label) {
+                        return { label };
+                    },
+                },
+                logRequestComplete(request) {
+                    return request.route.settings.tags?.includes("api");
+                },
+            },
+        },
+        HapiInertPlugin,
+        HapiVisionPlugin,
+        {
+            plugin: HapiSwaggerPlugin,
+            options: {
+                info: {
+                    title: "W3up uploader API",
+                    version: "1.0.0",
+                    description:
+                        "An API to access web3.storage storage services through their w3up service.",
+                    contact: {
+                        name: "Carrot Labs",
+                        email: "tech@carrot-labs.xyz",
+                    },
+                },
+            },
+        },
+    ]);
+
+    const DB_CONNECTION_STRING = requireEnv({ name: "DB_CONNECTION_STRING" });
+    const dbClient = await getDbClient({
+        connectionString: DB_CONNECTION_STRING,
+        logger: server.logger,
+    });
 
     const W3UP_PRINCIPAL_KEY = requireEnv({ name: "W3UP_PRINCIPAL_KEY" });
     const W3UP_DELEGATION_PROOF = requireEnv({ name: "W3UP_DELEGATION_PROOF" });
@@ -45,42 +94,16 @@ const start = async () => {
         secretAccessKey: S3_SECRET_ACCESS_KEY,
     });
 
-    const serverPlugins = [
-        {
-            plugin: (await import("hapi-pino")).default,
-            options: {
-                formatters: {
-                    level(label) {
-                        return { label };
-                    },
-                },
-                logRequestComplete(request) {
-                    return request.route.settings.tags?.includes("api");
-                },
-            },
-        },
-    ];
-    if (DEV) {
-        serverPlugins.push((await import("@hapi/inert")).default);
-        serverPlugins.push((await import("@hapi/vision")).default);
-        serverPlugins.push({
-            plugin: (await import("hapi-swagger")).default,
-            options: {
-                info: {
-                    title: "W3up uploader API",
-                    version: "1.0.0",
-                    description:
-                        "An API to access web3.storage storage services through their w3up service.",
-                    contact: {
-                        name: "Carrot Labs",
-                        email: "tech@carrot-labs.xyz",
-                    },
-                },
-            },
-        });
-    }
-    await server.register(serverPlugins);
+    const JWT_SECRET = requireEnv({ name: "JWT_SECRET" });
+    server.auth.scheme(
+        "jwt",
+        getAuthenticationScheme({ jwtSecretKey: JWT_SECRET }),
+    );
+    server.auth.strategy("jwt", "jwt");
+    server.auth.default("jwt");
 
+    server.route(getLoginMessageRoute({ dbClient }));
+    server.route(getTokenRoute({ dbClient, jwtSecretKey: JWT_SECRET }));
     server.route(
         await getStoreJsonDataRoute({
             w3UpClient,

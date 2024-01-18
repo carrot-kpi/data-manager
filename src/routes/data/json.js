@@ -48,6 +48,16 @@ export const getStoreJsonDataRoute = async ({
                 maxBytes: 1024, // 1kb
             },
             validate: {
+                headers: joi
+                    .object({
+                        authorization: joi
+                            .string()
+                            .required()
+                            .regex(
+                                /^Bearer [0-9a-zA-Z]*\.[0-9a-zA-Z]*\.[0-9a-zA-Z-_]*$/,
+                            ),
+                    })
+                    .unknown(),
                 payload: joi.object({
                     data: joi
                         .object()
