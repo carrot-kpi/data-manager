@@ -1,9 +1,6 @@
 import { server as createServer } from "@hapi/hapi";
-import { create as createW3UpClient } from "@web3-storage/w3up-client";
-import { parse as parsePrincipalKey } from "@ucanto/principal/ed25519";
-import { importDAG } from "@ucanto/core/delegation";
-import { CarReader } from "@ipld/car";
 import { getStoreJsonDataRoute } from "./routes/data/json.js";
+import { getS3Client, getW3UpClient } from "./utils.js";
 
 const DEV = process.env.NODE_ENV !== "production";
 
@@ -22,28 +19,6 @@ const start = async () => {
 
     const HOST = requireEnv({ name: "HOST" });
     const PORT = requireEnv({ name: "PORT" });
-    const W3UP_PRINCIPAL_KEY = requireEnv({
-        name: "W3UP_PRINCIPAL_KEY",
-    });
-    const W3UP_DELEGATION_PROOF = requireEnv({
-        name: "W3UP_DELEGATION_PROOF",
-    });
-
-    const w3UpPrincipal = parsePrincipalKey(W3UP_PRINCIPAL_KEY);
-    const w3UpClient = await createW3UpClient({ principal: w3UpPrincipal });
-
-    const proofBlocks = [];
-    const reader = await CarReader.fromBytes(
-        Buffer.from(W3UP_DELEGATION_PROOF, "base64"),
-    );
-    for await (const block of reader.blocks()) {
-        proofBlocks.push(block);
-    }
-    const proof = importDAG(proofBlocks);
-
-    const space = await w3UpClient.addSpace(proof);
-    await w3UpClient.setCurrentSpace(space.did());
-
     const server = createServer({
         host: HOST,
         port: PORT,
@@ -51,6 +26,23 @@ const start = async () => {
         routes: {
             cors: true,
         },
+    });
+
+    const W3UP_PRINCIPAL_KEY = requireEnv({ name: "W3UP_PRINCIPAL_KEY" });
+    const W3UP_DELEGATION_PROOF = requireEnv({ name: "W3UP_DELEGATION_PROOF" });
+    const w3UpClient = await getW3UpClient({
+        principalKey: W3UP_PRINCIPAL_KEY,
+        delegationProof: W3UP_DELEGATION_PROOF,
+    });
+
+    const S3_ENDPOINT = requireEnv({ name: "S3_ENDPOINT" });
+    const S3_BUCKET = requireEnv({ name: "S3_BUCKET" });
+    const S3_ACCESS_KEY_ID = requireEnv({ name: "S3_ACCESS_KEY_ID" });
+    const S3_SECRET_ACCESS_KEY = requireEnv({ name: "S3_SECRET_ACCESS_KEY" });
+    const s3Client = getS3Client({
+        endpoint: S3_ENDPOINT,
+        accessKeyId: S3_ACCESS_KEY_ID,
+        secretAccessKey: S3_SECRET_ACCESS_KEY,
     });
 
     const serverPlugins = [
@@ -89,7 +81,13 @@ const start = async () => {
     }
     await server.register(serverPlugins);
 
-    server.route(await getStoreJsonDataRoute({ w3UpClient }));
+    server.route(
+        await getStoreJsonDataRoute({
+            w3UpClient,
+            s3Client,
+            s3Bucket: S3_BUCKET,
+        }),
+    );
 
     try {
         await server.start();

@@ -24,9 +24,9 @@ FROM base as runner
 COPY --from=prod-deps /app/node_modules /app/node_modules
 COPY --from=build /app/out/index.mjs /app/index.mjs
 
-RUN addgroup -S w3up-uploader-runners
-RUN adduser -S -G w3up-uploader-runners w3up-uploader-runner
-USER w3up-uploader-runner
+RUN addgroup -S data-uploader-runners
+RUN adduser -S -G data-uploader-runners data-uploader-runner
+USER data-uploader-runner
 
 ARG HOST
 ENV HOST=$HOST

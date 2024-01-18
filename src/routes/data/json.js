@@ -1,11 +1,20 @@
 import { badGateway } from "@hapi/boom";
 import joi from "joi";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
 
 /**
- * @param {{ w3UpClient: import("@web3-storage/w3up-client").Client }} params
+ * @param {{
+ *      w3UpClient: import("@web3-storage/w3up-client").Client,
+ *      s3Client: import("@aws-sdk/client-s3").S3Client,
+ *      s3Bucket: string
+ * }} params
  * @returns {import("@hapi/hapi").ServerRoute}
  */
-export const getStoreJsonDataRoute = async ({ w3UpClient }) => {
+export const getStoreJsonDataRoute = async ({
+    w3UpClient,
+    s3Client,
+    s3Bucket,
+}) => {
     return {
         method: "POST",
         path: "/data/json",
@@ -51,15 +60,31 @@ export const getStoreJsonDataRoute = async ({ w3UpClient }) => {
             /** @type {{ data: object }} */
             const payload = request.payload;
             const { data } = payload;
-            const content = Buffer.from(JSON.stringify(data)).toString();
-            const blob = new Blob([content]);
+            const dataString = JSON.stringify(data);
 
+            /** @type {string} */
             let cid;
             try {
-                cid = await w3UpClient.uploadFile(blob);
+                cid = (
+                    await w3UpClient.uploadFile(new Blob([dataString]))
+                ).toString();
             } catch (error) {
                 request.logger.error(error, "Could not upload data to w3up");
                 return badGateway("Could not upload data to w3up");
+            }
+
+            try {
+                const put = new PutObjectCommand({
+                    ACL: "public-read",
+                    Bucket: s3Bucket,
+                    Body: dataString,
+                    Key: cid,
+                    ContentType: "application/json",
+                });
+                await s3Client.send(put);
+            } catch (error) {
+                request.logger.error(error, "Could not upload data to s3");
+                return badGateway("Could not upload data to s3");
             }
 
             return h.response({ cid }).code(200);
