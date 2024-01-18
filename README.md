@@ -17,12 +17,10 @@
     <img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPL v3">
 </p>
 
-# Carrot w3up uploader
+# Carrot data uploader
 
-This project implements a simple server that acts as a proxy to
-[w3up](https://web3.storage)'s services. The service does not implement any auth
-procedure as it's meant to run inside a properly configured Kubernetes cluster
-where only other services running on the cluster can contact it.
+This project implements a simple server that acts as a proxy to various storage
+services. Its API can be accessed with a valid JWT.
 
 ## Tech used
 
@@ -30,7 +28,8 @@ The server is developed in standard JS (ESM) using `hapi`. The plugins used are:
 
 - `boom`: used to easily handle error responses.
 - `inert`, `vision` and `swagger`: used to serve a static OpenAPI documentation
-  of the service (in dev environment only).
+  of the service.
+- `pino`: used to handle logging.
 
 Additionally, request validation is performed using `joi`.
 
@@ -86,6 +85,9 @@ pnpm start
 Keep in mind that no automatic restart of the server's code on changes has been
 implemented, so as of now if you want to change something you'll have to kill
 and restart the server manually.
+
+If you at any time need a test JWT to call the APIs locally, take a look at the
+script under `./scripts/generate-jwt.js`.
 
 ## OpenAPI
 

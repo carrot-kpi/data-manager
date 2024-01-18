@@ -1,5 +1,4 @@
 import { server as createServer } from "@hapi/hapi";
-import { getStoreJsonDataRoute } from "./routes/data/json.js";
 import {
     getAuthenticationScheme,
     getDbClient,
@@ -12,6 +11,7 @@ import HapiVisionPlugin from "@hapi/vision";
 import HapiSwaggerPlugin from "hapi-swagger";
 import { getLoginMessageRoute } from "./routes/login-message.js";
 import { getTokenRoute } from "./routes/token.js";
+import { getDataRoutes } from "./routes/data.js";
 
 const DEV = process.env.NODE_ENV !== "production";
 
@@ -105,7 +105,7 @@ const start = async () => {
     server.route(getLoginMessageRoute({ dbClient }));
     server.route(getTokenRoute({ dbClient, jwtSecretKey: JWT_SECRET }));
     server.route(
-        await getStoreJsonDataRoute({
+        await getDataRoutes({
             w3UpClient,
             s3Client,
             s3Bucket: S3_BUCKET,

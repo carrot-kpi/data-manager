@@ -103,7 +103,7 @@ export const getTokenRoute = ({ dbClient, jwtSecretKey }) => {
 
             let token;
             try {
-                token = generateJWT({ jwtSecretKey });
+                token = generateJWT({ jwtSecretKey, address });
             } catch (error) {
                 request.logger.error(error, "Error while generating JWT");
                 return internal("Error while generating JWT");

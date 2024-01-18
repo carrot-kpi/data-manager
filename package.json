@@ -5,7 +5,7 @@
     "version": "0.1.0",
     "author": "Federico Luzzi <federico.luzzi@carrot-labs.xyz>",
     "license": "GPL-3.0-or-later",
-    "description": "A service to facilitate data uploads to web3.storage through their w3up service and to a S3 service of choice.",
+    "description": "A service to facilitate generic data uploads to different services.",
     "scripts": {
         "prepare": "node ./scripts/prepare.js",
         "commitlint": "commitlint -e",
@@ -36,6 +36,7 @@
         "@ipld/car": "^5.2.6",
         "@ucanto/core": "^9.0.1",
         "@ucanto/principal": "^9.0.0",
+        "@web3-storage/upload-client": "^13.0.0",
         "@web3-storage/w3up-client": "^12.0.0",
         "hapi-pino": "^12.1.0",
         "hapi-swagger": "^17.2.0",

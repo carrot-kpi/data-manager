@@ -7,7 +7,11 @@ import pg from "pg";
 import { randomBytes } from "crypto";
 import { isAddress } from "viem";
 import jsonwebtoken from "jsonwebtoken";
-import { JWT_ISSUER, NONCE_LENGTH_BYTES } from "./constants.js";
+import {
+    JWT_ISSUER,
+    NONCE_LENGTH_BYTES,
+    SUPPORTED_STORAGE_SERVICES,
+} from "./constants.js";
 import { unauthorized } from "@hapi/boom";
 
 /**
@@ -175,24 +179,38 @@ export const getAuthenticationScheme = ({ jwtSecretKey }) => {
 
             const jwt = authorization.split(" ")[1];
 
+            let scope;
+            let subject;
             try {
-                jsonwebtoken.verify(jwt, jwtSecretKey, { issuer: JWT_ISSUER });
+                const payload = jsonwebtoken.verify(jwt, jwtSecretKey, {
+                    issuer: JWT_ISSUER,
+                });
+                scope = payload.scp;
+                subject = payload.sub;
             } catch (error) {
                 return unauthorized("Invalid JWT");
             }
 
-            return h.authenticated({ credentials: {} });
+            return h.authenticated({
+                credentials: { scope, user: subject },
+            });
         },
     });
 };
 
 /**
- * @param {{ jwtSecretKey: string }} params
+ * @param {{ jwtSecretKey: string, address: import("viem").Address }} params
  * @returns {string}
  */
-export const generateJWT = ({ jwtSecretKey }) => {
-    return jsonwebtoken.sign({}, jwtSecretKey, {
-        expiresIn: "24 hours",
-        issuer: JWT_ISSUER,
-    });
+export const generateJWT = ({ jwtSecretKey, address }) => {
+    return jsonwebtoken.sign(
+        // end users should only be able to access the s3 based api
+        { scp: [SUPPORTED_STORAGE_SERVICES.s3] },
+        jwtSecretKey,
+        {
+            expiresIn: "24 hours",
+            issuer: JWT_ISSUER,
+            subject: address,
+        },
+    );
 };

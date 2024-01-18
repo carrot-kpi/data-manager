@@ -8,7 +8,7 @@ WORKDIR /app
 FROM base as prod-deps
 COPY package.json .
 COPY pnpm-lock.yaml .
-COPY scripts/ scripts/
+COPY scripts/prepare.js scripts/prepare.js
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-lockfile
 
 FROM base as build
