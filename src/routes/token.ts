@@ -7,12 +7,19 @@ import {
     getNonce,
     generateJWT,
 } from "../utils.js";
+import type { Client } from "pg";
+import type { ServerRoute } from "@hapi/hapi";
+import type { Address, Hex } from "viem";
 
-/**
- * @param {{ dbClient: import("pg").Client, jwtSecretKey: string }} params
- * @returns {import("@hapi/hapi").ServerRoute}
- */
-export const getTokenRoute = ({ dbClient, jwtSecretKey }) => {
+interface GetTokenRouteParams {
+    dbClient: Client;
+    jwtSecretKey: string;
+}
+
+export const getTokenRoute = ({
+    dbClient,
+    jwtSecretKey,
+}: GetTokenRouteParams): ServerRoute => {
     return {
         method: "POST",
         path: "/token",
@@ -61,14 +68,15 @@ export const getTokenRoute = ({ dbClient, jwtSecretKey }) => {
             },
         },
         handler: async (request, h) => {
-            /** @type {{ address: import("viem").Address, signature: import("viem").Hex }} */
-            const payload = request.payload;
-            const { address, signature } = payload;
+            const { address, signature } = request.payload as {
+                address: Address;
+                signature: Hex;
+            };
 
             if (!isAddress(address)) return badRequest("Invalid address");
             const checksummedAddress = getAddress(address);
 
-            let nonce;
+            let nonce: string;
             try {
                 nonce = await getNonce({
                     client: dbClient,

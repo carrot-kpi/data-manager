@@ -79,15 +79,18 @@ Once the `.env` file has been created you can go ahead and start the server
 using the following command launched from the package's root:
 
 ```
-pnpm start
+pnpm dev
 ```
 
-Keep in mind that no automatic restart of the server's code on changes has been
-implemented, so as of now if you want to change something you'll have to kill
-and restart the server manually.
+This command will start the server and automatically restart it on code changes
+leveraging `nodemon` and `tsx`.
 
 If you at any time need a test JWT to call the APIs locally, take a look at the
-script under `./scripts/generate-jwt.js`.
+script under `./scripts/generate-jwt.ts`. You can call it using:
+
+```
+pnpm generate-jwt
+```
 
 ## OpenAPI
 
