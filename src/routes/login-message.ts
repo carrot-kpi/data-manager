@@ -2,12 +2,17 @@ import { badRequest, internal } from "@hapi/boom";
 import joi from "joi";
 import { isAddress, getAddress } from "viem/utils";
 import { getLoginMessage, updateOrInsertNonce } from "../utils.js";
+import type { Client } from "pg";
+import type { ServerRoute } from "@hapi/hapi";
+import type { Address } from "viem";
 
-/**
- * @param {{ dbClient: import("pg").Client }} params
- * @returns {import("@hapi/hapi").ServerRoute}
- */
-export const getLoginMessageRoute = ({ dbClient }) => {
+interface GetLoginMessageRouteParams {
+    dbClient: Client;
+}
+
+export const getLoginMessageRoute = ({
+    dbClient,
+}: GetLoginMessageRouteParams): ServerRoute => {
     return {
         method: "GET",
         path: "/login-message/{address}",
@@ -58,11 +63,11 @@ export const getLoginMessageRoute = ({ dbClient }) => {
             },
         },
         handler: async (request, h) => {
-            const { address } = request.params;
+            const { address } = request.params as { address: Address };
             if (!isAddress(address)) return badRequest("invalid address");
             const checksummedAddress = getAddress(address);
 
-            let nonce;
+            let nonce: string;
             try {
                 nonce = await updateOrInsertNonce({
                     client: dbClient,

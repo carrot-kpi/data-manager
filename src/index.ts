@@ -1,29 +1,24 @@
-import { server as createServer } from "@hapi/hapi";
-import { getStoreJsonDataRoute } from "./routes/data/json.js";
+import {
+    server as createServer,
+    type Request,
+    type ReqRefDefaults,
+} from "@hapi/hapi";
 import {
     getAuthenticationScheme,
     getDbClient,
     getS3Client,
     getW3UpClient,
+    requireEnv,
 } from "./utils.js";
 import HapiPinoPlugin from "hapi-pino";
 import HapiInertPlugin from "@hapi/inert";
 import HapiVisionPlugin from "@hapi/vision";
 import HapiSwaggerPlugin from "hapi-swagger";
-import { getLoginMessageRoute } from "./routes/login-message.js";
-import { getTokenRoute } from "./routes/token.js";
+import { getLoginMessageRoute } from "./routes/login-message";
+import { getTokenRoute } from "./routes/token";
+import { getDataRoutes } from "./routes/data";
 
 const DEV = process.env.NODE_ENV !== "production";
-
-/**
- * @param {{ name: string }} params
- * @returns {string}
- */
-const requireEnv = ({ name }) => {
-    const env = process.env[name];
-    if (!env) throw new Error(`Env ${name} is required`);
-    return env;
-};
 
 const start = async () => {
     if (DEV) (await import("dotenv")).config();
@@ -43,11 +38,11 @@ const start = async () => {
             plugin: HapiPinoPlugin,
             options: {
                 formatters: {
-                    level(label) {
+                    level(label: string) {
                         return { label };
                     },
                 },
-                logRequestComplete(request) {
+                logRequestComplete(request: Request<ReqRefDefaults>) {
                     return request.route.settings.tags?.includes("api");
                 },
             },
@@ -58,10 +53,10 @@ const start = async () => {
             plugin: HapiSwaggerPlugin,
             options: {
                 info: {
-                    title: "W3up uploader API",
+                    title: "Data uploader API",
                     version: "1.0.0",
                     description:
-                        "An API to access web3.storage storage services through their w3up service.",
+                        "An API to access various storage services.",
                     contact: {
                         name: "Carrot Labs",
                         email: "tech@carrot-labs.xyz",
@@ -105,7 +100,7 @@ const start = async () => {
     server.route(getLoginMessageRoute({ dbClient }));
     server.route(getTokenRoute({ dbClient, jwtSecretKey: JWT_SECRET }));
     server.route(
-        await getStoreJsonDataRoute({
+        await getDataRoutes({
             w3UpClient,
             s3Client,
             s3Bucket: S3_BUCKET,

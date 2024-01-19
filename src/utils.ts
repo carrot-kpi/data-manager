@@ -1,20 +1,42 @@
-import { create as createW3UpClient } from "@web3-storage/w3up-client";
-import { parse as parsePrincipalKey } from "@ucanto/principal/ed25519";
+import {
+    create as createW3UpClient,
+    type Client as W3UpClient,
+} from "@web3-storage/w3up-client";
+import {
+    parse as parsePrincipalKey,
+    type Block,
+} from "@ucanto/principal/ed25519";
 import { importDAG } from "@ucanto/core/delegation";
 import { CarReader } from "@ipld/car";
 import { S3Client } from "@aws-sdk/client-s3";
-import pg from "pg";
+import pg, { type Client as PgClient } from "pg";
 import { randomBytes } from "crypto";
-import { isAddress } from "viem";
-import jsonwebtoken from "jsonwebtoken";
-import { JWT_ISSUER, NONCE_LENGTH_BYTES } from "./constants.js";
+import { isAddress, type Address } from "viem";
+import jsonwebtoken, { type JwtPayload } from "jsonwebtoken";
+import { JWT_ISSUER, NONCE_LENGTH_BYTES, StorageService } from "./constants";
 import { unauthorized } from "@hapi/boom";
+import { type ServerAuthScheme } from "@hapi/hapi";
+import { type Logger } from "pino";
 
-/**
- * @param {{ principalKey: string, delegationProof: string }} params
- * @returns {Promise<import("@web3-storage/w3up-client").Client>}
- */
-export const getW3UpClient = async ({ principalKey, delegationProof }) => {
+interface RequireEnvParams {
+    name: string;
+}
+
+export const requireEnv = ({ name }: RequireEnvParams): string => {
+    const env = process.env[name];
+    if (!env) throw new Error(`Env ${name} is required`);
+    return env;
+};
+
+interface GetW3UpClientParams {
+    principalKey: string;
+    delegationProof: string;
+}
+
+export const getW3UpClient = async ({
+    principalKey,
+    delegationProof,
+}: GetW3UpClientParams): Promise<W3UpClient> => {
     const w3UpPrincipal = parsePrincipalKey(principalKey);
     const w3UpClient = await createW3UpClient({ principal: w3UpPrincipal });
 
@@ -25,7 +47,7 @@ export const getW3UpClient = async ({ principalKey, delegationProof }) => {
     for await (const block of reader.blocks()) {
         proofBlocks.push(block);
     }
-    const proof = importDAG(proofBlocks);
+    const proof = importDAG(proofBlocks as unknown as Iterable<Block>);
 
     const space = await w3UpClient.addSpace(proof);
     await w3UpClient.setCurrentSpace(space.did());
@@ -33,11 +55,17 @@ export const getW3UpClient = async ({ principalKey, delegationProof }) => {
     return w3UpClient;
 };
 
-/**
- * @param {{ endpoint: string, accessKeyId: string; secretAccessKey: string }} params
- * @returns {import("@aws-sdk/client-s3").S3Client}
- */
-export const getS3Client = ({ endpoint, accessKeyId, secretAccessKey }) => {
+interface GetS3ClientParams {
+    endpoint: string;
+    accessKeyId: string;
+    secretAccessKey: string;
+}
+
+export const getS3Client = ({
+    endpoint,
+    accessKeyId,
+    secretAccessKey,
+}: GetS3ClientParams): S3Client => {
     return new S3Client({
         forcePathStyle: false, // Configures to use subdomain/virtual calling format.
         endpoint,
@@ -49,11 +77,15 @@ export const getS3Client = ({ endpoint, accessKeyId, secretAccessKey }) => {
     });
 };
 
-/**
- * @param {{ connectionString: string, logger: import("pino").Logger }} params
- * @returns {Promise<import("pg").Client>}
- */
-export const getDbClient = async ({ connectionString, logger }) => {
+interface GetDbClientParams {
+    connectionString: string;
+    logger: Logger;
+}
+
+export const getDbClient = async ({
+    connectionString,
+    logger,
+}: GetDbClientParams): Promise<PgClient> => {
     let client = new pg.Client({ connectionString });
     try {
         await client.connect();
@@ -93,11 +125,15 @@ export const getDbClient = async ({ connectionString, logger }) => {
     return client;
 };
 
-/**
- * @param {{ address: string, nonce: string; }} params
- * @returns {string}
- */
-export const getLoginMessage = ({ address, nonce }) => {
+interface GetLoginMessageParams {
+    address: Address;
+    nonce: string;
+}
+
+export const getLoginMessage = ({
+    address,
+    nonce,
+}: GetLoginMessageParams): string => {
     return (
         "Welcome to Carrot!\n\n" +
         "Sign this message to authenticate.\n\n" +
@@ -110,11 +146,15 @@ export const getLoginMessage = ({ address, nonce }) => {
     );
 };
 
-/**
- * @param {{ client: import("pg").Client, address: import("viem").Address }} params
- * @returns {Promise<string>}
- */
-export const updateOrInsertNonce = async ({ client, address }) => {
+interface UpdateOrInsertNonceParams {
+    client: PgClient;
+    address: Address;
+}
+
+export const updateOrInsertNonce = async ({
+    client,
+    address,
+}: UpdateOrInsertNonceParams): Promise<string> => {
     if (!isAddress(address))
         throw new Error(`Invalid address ${address} given`);
     const nonce = randomBytes(NONCE_LENGTH_BYTES).toString("hex");
@@ -125,11 +165,15 @@ export const updateOrInsertNonce = async ({ client, address }) => {
     return nonce;
 };
 
-/**
- * @param {{ client: import("pg").Client, address: import("viem").Address }} params
- * @returns {Promise<string>}
- */
-export const getNonce = async ({ client, address }) => {
+interface GetNonceParams {
+    client: PgClient;
+    address: Address;
+}
+
+export const getNonce = async ({
+    client,
+    address,
+}: GetNonceParams): Promise<string> => {
     if (!isAddress(address))
         throw new Error(`Invalid address ${address} given`);
     const result = await client.query(
@@ -141,20 +185,31 @@ export const getNonce = async ({ client, address }) => {
     return nonce;
 };
 
-/**
- * @param {{ client: import("pg").Client, address: import("viem").Address }} params
- */
-export const deleteNonce = async ({ client, address }) => {
+interface DeleteNonceParams {
+    client: PgClient;
+    address: Address;
+}
+
+export const deleteNonce = async ({
+    client,
+    address,
+}: DeleteNonceParams): Promise<void> => {
     if (!isAddress(address))
         throw new Error(`Invalid address ${address} given`);
     await client.query("DELETE FROM nonces WHERE address = $1", [address]);
 };
 
-/**
- * @param {{ jwtSecretKey: string }} params
- * @returns {import("@hapi/hapi").ServerAuthScheme}
- */
-export const getAuthenticationScheme = ({ jwtSecretKey }) => {
+interface GetAuthenticationSchemeParams {
+    jwtSecretKey: string;
+}
+
+interface DataUploaderJWTPayload extends JwtPayload {
+    scp?: string[];
+}
+
+export const getAuthenticationScheme = ({
+    jwtSecretKey,
+}: GetAuthenticationSchemeParams): ServerAuthScheme => {
     return () => ({
         authenticate: (request, h) => {
             /**
@@ -173,26 +228,46 @@ export const getAuthenticationScheme = ({ jwtSecretKey }) => {
             )
                 return unauthorized("Malformed Authorization header");
 
-            const jwt = authorization.split(" ")[1];
-
             try {
-                jsonwebtoken.verify(jwt, jwtSecretKey, { issuer: JWT_ISSUER });
+                const jwt = authorization.split(" ")[1];
+                const payload: DataUploaderJWTPayload = jsonwebtoken.verify(
+                    jwt,
+                    jwtSecretKey,
+                    {
+                        issuer: JWT_ISSUER,
+                    },
+                ) as DataUploaderJWTPayload;
+
+                return h.authenticated({
+                    credentials: {
+                        scope: payload.scp,
+                        user: { address: payload.sub },
+                    },
+                });
             } catch (error) {
                 return unauthorized("Invalid JWT");
             }
-
-            return h.authenticated({ credentials: {} });
         },
     });
 };
 
-/**
- * @param {{ jwtSecretKey: string }} params
- * @returns {string}
- */
-export const generateJWT = ({ jwtSecretKey }) => {
-    return jsonwebtoken.sign({}, jwtSecretKey, {
-        expiresIn: "24 hours",
-        issuer: JWT_ISSUER,
-    });
+interface GenerateJWTParas {
+    jwtSecretKey: string;
+    address: Address;
+}
+
+export const generateJWT = ({
+    jwtSecretKey,
+    address,
+}: GenerateJWTParas): string => {
+    return jsonwebtoken.sign(
+        // end users should only be able to access the s3 based api
+        { scp: [StorageService.S3] },
+        jwtSecretKey,
+        {
+            expiresIn: "24 hours",
+            issuer: JWT_ISSUER,
+            subject: address,
+        },
+    );
 };
