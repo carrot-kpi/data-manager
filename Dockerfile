@@ -17,7 +17,7 @@ COPY pnpm-lock.yaml .
 COPY scripts/prepare.js scripts/prepare.js
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 COPY src/ src/
-RUN pnpm build:prod
+RUN pnpm build
 
 FROM base as runner
 
