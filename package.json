@@ -48,6 +48,7 @@
         "hapi-swagger": "^17.2.0",
         "joi": "^17.11.1",
         "jsonwebtoken": "^9.0.2",
+        "multiformats": "^13.0.1",
         "pg": "^8.11.3",
         "viem": "^2.2.0"
     }
