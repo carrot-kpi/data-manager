@@ -77,22 +77,7 @@ export const getS3DataRoute = async ({
         handler: async (request, h) => {
             const { data } = request.payload as { data: object };
             const dataString = JSON.stringify(data);
-            console.log("HERE");
             const { cid, car } = await ipfsEncodeJSON({ json: data });
-
-            try {
-                const put = new PutObjectCommand({
-                    ACL: "public-read",
-                    Bucket: s3Bucket,
-                    Body: dataString,
-                    Key: cid,
-                    ContentType: "application/json",
-                });
-                await s3Client.send(put);
-            } catch (error) {
-                request.logger.error(error, "Could not upload raw data to S3");
-                return badGateway("Could not upload data to S3");
-            }
 
             try {
                 const put = new PutObjectCommand({
@@ -106,6 +91,20 @@ export const getS3DataRoute = async ({
                 await s3Client.send(put);
             } catch (error) {
                 request.logger.error(error, "Could not upload CAR to S3");
+                return badGateway("Could not upload data to S3");
+            }
+
+            try {
+                const put = new PutObjectCommand({
+                    ACL: "public-read",
+                    Bucket: s3Bucket,
+                    Body: dataString,
+                    Key: cid,
+                    ContentType: "application/json",
+                });
+                await s3Client.send(put);
+            } catch (error) {
+                request.logger.error(error, "Could not upload raw data to S3");
                 return badGateway("Could not upload data to S3");
             }
 
