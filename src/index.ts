@@ -82,8 +82,7 @@ const start = async () => {
     const S3_BUCKET = requireEnv({ name: "S3_BUCKET" });
     const S3_ACCESS_KEY_ID = requireEnv({ name: "S3_ACCESS_KEY_ID" });
     const S3_SECRET_ACCESS_KEY = requireEnv({ name: "S3_SECRET_ACCESS_KEY" });
-    const s3Client = await getS3Client({
-        s3Bucket: S3_BUCKET,
+    const s3Client = getS3Client({
         accessKeyId: S3_ACCESS_KEY_ID,
         secretAccessKey: S3_SECRET_ACCESS_KEY,
     });

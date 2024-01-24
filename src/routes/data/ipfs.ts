@@ -129,7 +129,7 @@ export const getIPFSDataRoute = async ({
                 return badGateway("Could not upload data to IPFS");
             }
 
-            // Fetch the object's current Carrot-Template tag
+            // Fetch the object's current "CarrotTemplate" tag
             let templateTag;
             try {
                 const getTags = new GetObjectTaggingCommand({
@@ -138,16 +138,16 @@ export const getIPFSDataRoute = async ({
                 });
                 const tags = await s3Client.send(getTags);
                 templateTag = tags.TagSet?.find(
-                    (tag) => tag.Key === "Carrot-Template",
+                    (tag) => tag.Key === "CarrotTemplate",
                 );
                 if (!templateTag)
                     throw new Error(
-                        `No Carrot-Template tag on object with key "${cid}" on S3`,
+                        `No "CarrotTemplate" tag on object with key "${cid}" on S3`,
                     );
             } catch (error) {
                 request.logger.error(
                     error,
-                    `Could not get Carrot-Template tag for object with key "${cid}"`,
+                    `Could not get "CarrotTemplate" tag for object with key "${cid}"`,
                 );
                 return badGateway("Could not upload data to IPFS");
             }
@@ -163,7 +163,7 @@ export const getIPFSDataRoute = async ({
                         TagSet: [
                             templateTag,
                             {
-                                Key: "Carrot-Removable",
+                                Key: "CarrotLimbo",
                                 Value: "false",
                             },
                         ],
