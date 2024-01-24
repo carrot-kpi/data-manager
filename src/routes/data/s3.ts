@@ -81,12 +81,12 @@ export const getS3DataRoute = async ({
 
             try {
                 const put = new PutObjectCommand({
-                    ACL: "public-read",
                     Bucket: s3Bucket,
                     Key: `${cid}/car`,
                     Body: Readable.fromWeb(car.stream()),
                     ContentLength: car.size,
                     ContentType: "application/vnd.ipld.car",
+                    Tagging: "Carrot-Template=false&Carrot-Removable=true",
                 });
                 await s3Client.send(put);
             } catch (error) {
@@ -96,11 +96,11 @@ export const getS3DataRoute = async ({
 
             try {
                 const put = new PutObjectCommand({
-                    ACL: "public-read",
                     Bucket: s3Bucket,
                     Body: dataString,
                     Key: cid,
                     ContentType: "application/json",
+                    Tagging: "Carrot-Template=false&Carrot-Removable=true",
                 });
                 await s3Client.send(put);
             } catch (error) {

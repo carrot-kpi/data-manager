@@ -8,7 +8,10 @@ import {
 } from "@ucanto/principal/ed25519";
 import { importDAG } from "@ucanto/core/delegation";
 import { CarReader } from "@ipld/car";
-import { S3Client } from "@aws-sdk/client-s3";
+import {
+    PutBucketLifecycleConfigurationCommand,
+    S3Client,
+} from "@aws-sdk/client-s3";
 import pg, { type Client as PgClient } from "pg";
 import { randomBytes } from "crypto";
 import { isAddress, type Address } from "viem";
@@ -62,25 +65,77 @@ export const getW3UpClient = async ({
 };
 
 interface GetS3ClientParams {
-    endpoint: string;
+    s3Bucket: string;
     accessKeyId: string;
     secretAccessKey: string;
 }
 
-export const getS3Client = ({
-    endpoint,
+export const getS3Client = async ({
+    s3Bucket,
     accessKeyId,
     secretAccessKey,
-}: GetS3ClientParams): S3Client => {
-    return new S3Client({
-        forcePathStyle: false, // Configures to use subdomain/virtual calling format.
-        endpoint,
+}: GetS3ClientParams): Promise<S3Client> => {
+    const client = new S3Client({
         region: "us-east-1",
         credentials: {
             accessKeyId,
             secretAccessKey,
         },
     });
+
+    const putBucketLifecycleConfiguration =
+        new PutBucketLifecycleConfigurationCommand({
+            Bucket: s3Bucket,
+            LifecycleConfiguration: {
+                Rules: [
+                    {
+                        ID: "DeleteNonPersistedCarrotFiles",
+                        Status: "Enabled",
+                        Expiration: {
+                            Days: 1,
+                        },
+                        Filter: {
+                            And: {
+                                Tags: [
+                                    {
+                                        Key: "Carrot-Template",
+                                        Value: "false",
+                                    },
+                                    {
+                                        Key: "Carrot-Removable",
+                                        Value: "true",
+                                    },
+                                ],
+                            },
+                        },
+                    },
+                    {
+                        ID: "DeleteNonPersistedCarrotTemplates",
+                        Status: "Enabled",
+                        Expiration: {
+                            Days: 14,
+                        },
+                        Filter: {
+                            And: {
+                                Tags: [
+                                    {
+                                        Key: "Carrot-Template",
+                                        Value: "true",
+                                    },
+                                    {
+                                        Key: "Carrot-Removable",
+                                        Value: "true",
+                                    },
+                                ],
+                            },
+                        },
+                    },
+                ],
+            },
+        });
+    await client.send(putBucketLifecycleConfiguration);
+
+    return client;
 };
 
 interface GetDbClientParams {
