@@ -13,10 +13,16 @@ import pg, { type Client as PgClient } from "pg";
 import { randomBytes } from "crypto";
 import { isAddress, type Address } from "viem";
 import jsonwebtoken, { type JwtPayload } from "jsonwebtoken";
-import { JWT_ISSUER, NONCE_LENGTH_BYTES, StorageService } from "./constants";
+import { JWT_ISSUER, NONCE_LENGTH_BYTES, SCOPE_S3 } from "./constants";
 import { unauthorized } from "@hapi/boom";
 import { type ServerAuthScheme } from "@hapi/hapi";
 import { type Logger } from "pino";
+import * as jsonCodec from "multiformats/codecs/json";
+import { sha256 } from "multiformats/hashes/sha2";
+import { base32 } from "multiformats/bases/base32";
+import { CID } from "multiformats/cid";
+import { CAR } from "@web3-storage/upload-client";
+import type { CARFile } from "@web3-storage/upload-client/types";
 
 interface RequireEnvParams {
     name: string;
@@ -56,19 +62,15 @@ export const getW3UpClient = async ({
 };
 
 interface GetS3ClientParams {
-    endpoint: string;
     accessKeyId: string;
     secretAccessKey: string;
 }
 
 export const getS3Client = ({
-    endpoint,
     accessKeyId,
     secretAccessKey,
 }: GetS3ClientParams): S3Client => {
     return new S3Client({
-        forcePathStyle: false, // Configures to use subdomain/virtual calling format.
-        endpoint,
         region: "us-east-1",
         credentials: {
             accessKeyId,
@@ -262,7 +264,7 @@ export const generateJWT = ({
 }: GenerateJWTParas): string => {
     return jsonwebtoken.sign(
         // end users should only be able to access the s3 based api
-        { scp: [StorageService.S3] },
+        { scp: [SCOPE_S3] },
         jwtSecretKey,
         {
             expiresIn: "24 hours",
@@ -270,4 +272,26 @@ export const generateJWT = ({
             subject: address,
         },
     );
+};
+
+interface JSONToCARParams {
+    json: object;
+}
+
+interface JSONToCARReturnValue {
+    cid: string;
+    car: CARFile;
+}
+
+export const ipfsEncodeJSON = async ({
+    json,
+}: JSONToCARParams): Promise<JSONToCARReturnValue> => {
+    const bytes = jsonCodec.encode(json);
+    const digest = await sha256.digest(bytes);
+    const cid = CID.createV1(jsonCodec.code, digest);
+
+    return {
+        cid: cid.toString(base32),
+        car: await CAR.encode([{ cid, bytes }]),
+    };
 };

@@ -16,7 +16,8 @@ import HapiVisionPlugin from "@hapi/vision";
 import HapiSwaggerPlugin from "hapi-swagger";
 import { getLoginMessageRoute } from "./routes/login-message";
 import { getTokenRoute } from "./routes/token";
-import { getDataRoutes } from "./routes/data";
+import { getS3DataRoute } from "./routes/data/s3.js";
+import { getIPFSDataRoute } from "./routes/data/ipfs.js";
 
 const DEV = process.env.NODE_ENV !== "production";
 
@@ -55,8 +56,7 @@ const start = async () => {
                 info: {
                     title: "Data uploader API",
                     version: "1.0.0",
-                    description:
-                        "An API to access various storage services.",
+                    description: "An API to access various storage services.",
                     contact: {
                         name: "Carrot Labs",
                         email: "tech@carrot-labs.xyz",
@@ -79,12 +79,10 @@ const start = async () => {
         delegationProof: W3UP_DELEGATION_PROOF,
     });
 
-    const S3_ENDPOINT = requireEnv({ name: "S3_ENDPOINT" });
     const S3_BUCKET = requireEnv({ name: "S3_BUCKET" });
     const S3_ACCESS_KEY_ID = requireEnv({ name: "S3_ACCESS_KEY_ID" });
     const S3_SECRET_ACCESS_KEY = requireEnv({ name: "S3_SECRET_ACCESS_KEY" });
     const s3Client = getS3Client({
-        endpoint: S3_ENDPOINT,
         accessKeyId: S3_ACCESS_KEY_ID,
         secretAccessKey: S3_SECRET_ACCESS_KEY,
     });
@@ -100,7 +98,13 @@ const start = async () => {
     server.route(getLoginMessageRoute({ dbClient }));
     server.route(getTokenRoute({ dbClient, jwtSecretKey: JWT_SECRET }));
     server.route(
-        await getDataRoutes({
+        await getS3DataRoute({
+            s3Client,
+            s3Bucket: S3_BUCKET,
+        }),
+    );
+    server.route(
+        await getIPFSDataRoute({
             w3UpClient,
             s3Client,
             s3Bucket: S3_BUCKET,
