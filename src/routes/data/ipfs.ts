@@ -7,9 +7,11 @@ import {
     PutObjectTaggingCommand,
     S3Client,
 } from "@aws-sdk/client-s3";
+import { type StreamingBlobPayloadOutputTypes } from "@smithy/types";
 import type { ServerRoute } from "@hapi/hapi";
 import type { Client as W3UpClient } from "@web3-storage/w3up-client";
 import { SCOPE_IPFS } from "../../constants";
+import { CID } from "multiformats/cid";
 
 interface GetDataRoutesParams {
     w3UpClient: W3UpClient;
@@ -51,8 +53,11 @@ export const getIPFSDataRoute = async ({
                     },
                 },
             },
-            description: "Stores JSON data on S3.",
-            notes: "Stores JSON data on S3. The data has to have previously been stored on S3 in a format that the service can understand and the caller must be explicitly authorized to call this endpoint.",
+            description: "Replicates limbo data to IPFS.",
+            notes:
+                "Replicated limbo data to IPFS. The data has to be already existing and " +
+                "in limbo and the caller must be explicitly authorized to call this endpoint " +
+                "in order for the operation to succeed.",
             tags: ["api"],
             auth: {
                 access: {
@@ -83,19 +88,28 @@ export const getIPFSDataRoute = async ({
         handler: async (request, h) => {
             const { cid } = request.payload as { cid: string };
 
+            // Get CID and validate it in the process
+            let parsedCid: CID;
+            try {
+                parsedCid = CID.parse(cid);
+            } catch (error) {
+                request.logger.error(error, `Could not parse CID ${cid}`);
+                return badGateway("Could not upload data to IPFS");
+            }
+
             // Fetch the raw CAR stream from S3
-            let carStream: ReadableStream;
+            let car: StreamingBlobPayloadOutputTypes;
             try {
                 const getCAR = new GetObjectCommand({
                     Bucket: s3Bucket,
                     Key: `${cid}/car`,
                 });
-                const car = await s3Client.send(getCAR);
-                if (!car.Body)
+                const output = await s3Client.send(getCAR);
+                if (!output.Body)
                     throw new Error(
                         `Could not fetch object with key "${cid}/car" from S3`,
                     );
-                carStream = car.Body.transformToWebStream();
+                car = output.Body;
             } catch (error) {
                 request.logger.error(error, "Could not fetch CAR from S3");
                 return badGateway("Could not upload data to IPFS");
@@ -104,9 +118,9 @@ export const getIPFSDataRoute = async ({
             // Upload the raw CAR on web3.storage
             try {
                 const cidFromUpload = await w3UpClient.uploadCAR({
-                    stream: () => carStream,
+                    stream: car.transformToWebStream,
                 });
-                if (cidFromUpload.toV1().toString() !== cid)
+                if (!parsedCid.equals(cidFromUpload))
                     throw new Error(
                         `CID mismatch: got ${cidFromUpload.toV1().toString()}, expected ${cid}`,
                     );
@@ -115,7 +129,7 @@ export const getIPFSDataRoute = async ({
                 return badGateway("Could not upload data to IPFS");
             }
 
-            // Feth the object's current Carrot-Template tag
+            // Fetch the object's current Carrot-Template tag
             let templateTag;
             try {
                 const getTags = new GetObjectTaggingCommand({

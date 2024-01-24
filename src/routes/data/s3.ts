@@ -17,7 +17,7 @@ export const getS3DataRoute = async ({
 }: GetDataRoutesParams): Promise<ServerRoute> => {
     return {
         method: "POST",
-        path: "/data/s3",
+        path: "/data/s3/json",
         options: {
             plugins: {
                 "hapi-swagger": {
@@ -44,8 +44,8 @@ export const getS3DataRoute = async ({
                     },
                 },
             },
-            description: "Stores JSON data on S3.",
-            notes: "Stores JSON data on S3.",
+            description: "Stores limbo JSON data on S3.",
+            notes: "Stores limbo JSON data on S3.",
             tags: ["api"],
             auth: {
                 access: {
