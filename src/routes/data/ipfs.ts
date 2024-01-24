@@ -55,7 +55,7 @@ export const getIPFSDataRoute = async ({
             },
             description: "Replicates limbo data to IPFS.",
             notes:
-                "Replicated limbo data to IPFS. The data has to be already existing and " +
+                "Replicates limbo data to IPFS. The data has to be already existing and " +
                 "in limbo and the caller must be explicitly authorized to call this endpoint " +
                 "in order for the operation to succeed.",
             tags: ["api"],
