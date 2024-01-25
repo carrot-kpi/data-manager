@@ -169,7 +169,7 @@ Once the dependencies are installed, create a `.env` file at the root of the
 repo. For convenience, you can copy and paste the provided `.env.example` file
 and rename it to `.env`.
 
-The required env variables are:
+The env variables are:
 
 - `HOST`: the server's host.
 - `PORT`: the server's port.
@@ -181,15 +181,23 @@ The required env variables are:
 - `W3UP_DELEGATION_PROOF`: a proof that proves the delegation of `store` and
   `upload` capabilities from a space owner to the previously given principal key
   (the proof also contains the space the delegation was given on).
+- `S3_ENDPOINT (optional)`: an endpoint to an S3 server.
+- `S3_BUCKET`: the S3 bucket in which to store data.
+- `S3_ACCESS_KEY_ID`: the access key used to authenticate to the S3 API.
+- `S3_SECRET_ACCESS_KEY`: the secret used to authenticate to the S3 API.
 
 In order to get the correct values for `W3UP_PRINCIPAL_KEY` and
 `W3UP_DELEGATION_PROOF` follow
 [this procedure](https://github.com/web3-storage/w3up/tree/main/packages/w3up-client#bringing-your-own-agent-and-delegation).
+For the other values, if you decide to spin up the local testing environment
+using the Docker Compose file as explained later, you can just copy over the
+`.env.example` values as they will mostly be right.
 
 Once the `.env` file has been created, it's necessary to have all the correlated
 infrastructure up and running in order to properly test the server. In
 particular we need a `Postgres` database in which the server can store nonces to
-avoid signature replay attacks.
+avoid signature replay attacks, and a S3-compatible server to which we can store
+data locally to test the APIs.
 
 For convenience all the needed infrastructure can easily be spun up using the
 provided `docker-compose.yaml` file at the root of the package. Run the
@@ -213,8 +221,10 @@ If you at any time need a test JWT to call the APIs locally, take a look at the
 script under `./scripts/generate-jwt.ts`. You can call it using:
 
 ```
-pnpm generate-jwt
+pnpm generate-jwt $SCOPE
 ```
+
+Where `$SCOPE` is the scope/role you want the generated JWT to have.
 
 ## OpenAPI
 
