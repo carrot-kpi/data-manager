@@ -17,7 +17,7 @@
     <img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPL v3">
 </p>
 
-# Carrot data uploader
+# Carrot data manager
 
 This service is responsible for managing data in the Carrot protocol, which
 primarily falls into two categories at the time of writing:
@@ -67,13 +67,13 @@ Data in Carrot is mainly stored in two locations:
    API takes the raw input JSON, encodes it into the IPFS CAR format and
    determines the raw data CID. Both the raw content and the CAR file are
    uploaded to the S3 bucket using the CID as the base key (the raw content uses
-   the CID itself as the key, while the CAR is uploaded under `$CID/car`).
+   the CID itself as the key, while the CAR is uploaded under `$CID-car`).
 
 2. **`/data/ipfs`:** this endpoint persists limbo data and replicates it to
    IPFS/Filecoin. The API accepts a single parameter `cid` which must refer to
    some limbo data that the caller wants to persist to IPFS/Filecoin. The API
    fetches the CAR associated with the passed CID (stored on the S3 bucket under
-   `$CID/car`) and stores the fetched CAR file on IPFS/Filecoin through
+   `$CID-car`) and stores the fetched CAR file on IPFS/Filecoin through
    web3.storage's w3up service. The resulting upload CID is checked for
    consistency and if everything is fine the raw data is also persisted on the
    S3 bucket while the CAR is deleted from there.
@@ -119,7 +119,7 @@ template's code is referencing data the doesn't exist anywhere**.
 
 The best solution to avoid this scenario is to handle both limbo data addition
 and persistent data addition in the same place, and this place is the
-`data-uploader` service. Adding data to limbo will cause the `data-uploader`
+`data-manager` service. Adding data to limbo will cause the `data-manager`
 service to calculate this data's CID by creating an IPFS CAR containing the
 data, and returning this CID to the caller. **It's then responsibility of the
 caller to use that CID to reference the limbo data**. As long as the caller does

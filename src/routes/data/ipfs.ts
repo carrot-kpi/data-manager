@@ -102,12 +102,12 @@ export const getIPFSDataRoute = async ({
             try {
                 const getCAR = new GetObjectCommand({
                     Bucket: s3Bucket,
-                    Key: `${cid}/car`,
+                    Key: `${cid}-car`,
                 });
                 const output = await s3Client.send(getCAR);
                 if (!output.Body)
                     throw new Error(
-                        `Could not fetch object with key "${cid}/car" from S3`,
+                        `Could not fetch object with key "${cid}-car" from S3`,
                     );
                 car = output.Body;
             } catch (error) {
@@ -185,13 +185,13 @@ export const getIPFSDataRoute = async ({
             try {
                 const deleteCAR = new DeleteObjectCommand({
                     Bucket: s3Bucket,
-                    Key: `${cid}/car`,
+                    Key: `${cid}-car`,
                 });
                 await s3Client.send(deleteCAR);
             } catch (error) {
                 request.logger.error(
                     error,
-                    `Could not delete CAR with key "${cid}/car" from S3`,
+                    `Could not delete CAR with key "${cid}-car" from S3`,
                 );
                 return badGateway("Could not upload data to IPFS");
             }

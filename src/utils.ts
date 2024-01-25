@@ -62,16 +62,19 @@ export const getW3UpClient = async ({
 };
 
 interface GetS3ClientParams {
+    endpoint?: string;
     accessKeyId: string;
     secretAccessKey: string;
 }
 
 export const getS3Client = ({
+    endpoint,
     accessKeyId,
     secretAccessKey,
 }: GetS3ClientParams): S3Client => {
     return new S3Client({
         region: "us-east-1",
+        endpoint,
         credentials: {
             accessKeyId,
             secretAccessKey,
@@ -205,7 +208,7 @@ interface GetAuthenticationSchemeParams {
     jwtSecretKey: string;
 }
 
-interface DataUploaderJWTPayload extends JwtPayload {
+interface DataManagerJWTPayload extends JwtPayload {
     scp?: string[];
 }
 
@@ -232,13 +235,13 @@ export const getAuthenticationScheme = ({
 
             try {
                 const jwt = authorization.split(" ")[1];
-                const payload: DataUploaderJWTPayload = jsonwebtoken.verify(
+                const payload: DataManagerJWTPayload = jsonwebtoken.verify(
                     jwt,
                     jwtSecretKey,
                     {
                         issuer: JWT_ISSUER,
                     },
-                ) as DataUploaderJWTPayload;
+                ) as DataManagerJWTPayload;
 
                 return h.authenticated({
                     credentials: {

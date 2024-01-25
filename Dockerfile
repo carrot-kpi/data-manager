@@ -24,9 +24,9 @@ FROM base as runner
 COPY --from=prod-deps /app/node_modules /app/node_modules
 COPY --from=build /app/out/index.mjs /app/index.mjs
 
-RUN addgroup -S data-uploader-runners
-RUN adduser -S -G data-uploader-runners data-uploader-runner
-USER data-uploader-runner
+RUN addgroup -S data-manager-runners
+RUN adduser -S -G data-manager-runners data-manager-runner
+USER data-manager-runner
 
 ARG HOST
 ENV HOST=$HOST

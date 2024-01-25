@@ -82,7 +82,7 @@ export const getS3DataRoute = async ({
             try {
                 const put = new PutObjectCommand({
                     Bucket: s3Bucket,
-                    Key: `${cid}/car`,
+                    Key: `${cid}-car`,
                     Body: Readable.fromWeb(car.stream()),
                     ContentLength: car.size,
                     ContentType: "application/vnd.ipld.car",
