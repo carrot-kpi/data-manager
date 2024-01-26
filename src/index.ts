@@ -6,7 +6,7 @@ import {
 import {
     getAuthenticationScheme,
     getDbClient,
-    getS3Client,
+    getS3,
     getW3UpClient,
     requireEnv,
 } from "./utils.js";
@@ -16,7 +16,8 @@ import HapiVisionPlugin from "@hapi/vision";
 import HapiSwaggerPlugin from "hapi-swagger";
 import { getLoginMessageRoute } from "./routes/login-message";
 import { getTokenRoute } from "./routes/token";
-import { getS3DataRoute } from "./routes/data/s3.js";
+import { getS3DataJSONRoute } from "./routes/data/s3/json.js";
+import { getS3DataTemplatesRoute } from "./routes/data/s3/templates.js";
 import { getIPFSDataRoute } from "./routes/data/ipfs.js";
 
 const DEV = process.env.NODE_ENV !== "production";
@@ -83,7 +84,7 @@ const start = async () => {
     const S3_BUCKET = requireEnv({ name: "S3_BUCKET" });
     const S3_ACCESS_KEY_ID = requireEnv({ name: "S3_ACCESS_KEY_ID" });
     const S3_SECRET_ACCESS_KEY = requireEnv({ name: "S3_SECRET_ACCESS_KEY" });
-    const s3Client = getS3Client({
+    const s3 = getS3({
         endpoint: S3_ENDPOINT,
         accessKeyId: S3_ACCESS_KEY_ID,
         secretAccessKey: S3_SECRET_ACCESS_KEY,
@@ -100,16 +101,22 @@ const start = async () => {
     server.route(getLoginMessageRoute({ dbClient }));
     server.route(getTokenRoute({ dbClient, jwtSecretKey: JWT_SECRET }));
     server.route(
-        await getS3DataRoute({
-            s3Client,
-            s3Bucket: S3_BUCKET,
+        await getS3DataJSONRoute({
+            s3,
+            s3BucketName: S3_BUCKET,
+        }),
+    );
+    server.route(
+        await getS3DataTemplatesRoute({
+            s3,
+            s3BucketName: S3_BUCKET,
         }),
     );
     server.route(
         await getIPFSDataRoute({
+            s3,
+            s3BucketName: S3_BUCKET,
             w3UpClient,
-            s3Client,
-            s3Bucket: S3_BUCKET,
         }),
     );
 

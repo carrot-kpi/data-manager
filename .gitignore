@@ -140,3 +140,5 @@ tfplan
 build
 .compose
 .turbo
+
+upload-test

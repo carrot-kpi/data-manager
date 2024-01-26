@@ -1,12 +1,6 @@
 import { badGateway } from "@hapi/boom";
 import joi from "joi";
-import {
-    DeleteObjectCommand,
-    GetObjectCommand,
-    GetObjectTaggingCommand,
-    PutObjectTaggingCommand,
-    S3Client,
-} from "@aws-sdk/client-s3";
+import { S3 } from "@aws-sdk/client-s3";
 import { type StreamingBlobPayloadOutputTypes } from "@smithy/types";
 import type { ServerRoute } from "@hapi/hapi";
 import type { Client as W3UpClient } from "@web3-storage/w3up-client";
@@ -14,15 +8,15 @@ import { SCOPE_IPFS } from "../../constants";
 import { CID } from "multiformats/cid";
 
 interface GetDataRoutesParams {
+    s3: S3;
+    s3BucketName: string;
     w3UpClient: W3UpClient;
-    s3Client: S3Client;
-    s3Bucket: string;
 }
 
 export const getIPFSDataRoute = async ({
+    s3,
+    s3BucketName,
     w3UpClient,
-    s3Client,
-    s3Bucket,
 }: GetDataRoutesParams): Promise<ServerRoute> => {
     return {
         method: "POST",
@@ -100,14 +94,13 @@ export const getIPFSDataRoute = async ({
             // Fetch the raw CAR stream from S3
             let car: StreamingBlobPayloadOutputTypes;
             try {
-                const getCAR = new GetObjectCommand({
-                    Bucket: s3Bucket,
-                    Key: `${cid}-car`,
+                const output = await s3.getObject({
+                    Bucket: s3BucketName,
+                    Key: `${cid}/__car`,
                 });
-                const output = await s3Client.send(getCAR);
                 if (!output.Body)
                     throw new Error(
-                        `Could not fetch object with key "${cid}-car" from S3`,
+                        `Could not fetch object with key "${cid}/__car" from S3`,
                     );
                 car = output.Body;
             } catch (error) {
@@ -132,11 +125,10 @@ export const getIPFSDataRoute = async ({
             // Fetch the object's current "CarrotTemplate" tag
             let templateTag;
             try {
-                const getTags = new GetObjectTaggingCommand({
-                    Bucket: s3Bucket,
+                const tags = await s3.getObjectTagging({
+                    Bucket: s3BucketName,
                     Key: cid,
                 });
-                const tags = await s3Client.send(getTags);
                 templateTag = tags.TagSet?.find(
                     (tag) => tag.Key === "CarrotTemplate",
                 );
@@ -156,8 +148,8 @@ export const getIPFSDataRoute = async ({
             // This way the lifecycle rule that removes non persisted objects
             // from the target bucket won't delete this item
             try {
-                const setNonRemovableContent = new PutObjectTaggingCommand({
-                    Bucket: s3Bucket,
+                await s3.putObjectTagging({
+                    Bucket: s3BucketName,
                     Key: cid,
                     Tagging: {
                         TagSet: [
@@ -169,7 +161,6 @@ export const getIPFSDataRoute = async ({
                         ],
                     },
                 });
-                await s3Client.send(setNonRemovableContent);
             } catch (error) {
                 request.logger.error(
                     error,
@@ -183,15 +174,14 @@ export const getIPFSDataRoute = async ({
             // This shouldn't be needed because of the lifecycle rule, but we do
             // this asap.
             try {
-                const deleteCAR = new DeleteObjectCommand({
-                    Bucket: s3Bucket,
-                    Key: `${cid}-car`,
+                await s3.deleteObject({
+                    Bucket: s3BucketName,
+                    Key: `${cid}/__car`,
                 });
-                await s3Client.send(deleteCAR);
             } catch (error) {
                 request.logger.error(
                     error,
-                    `Could not delete CAR with key "${cid}-car" from S3`,
+                    `Could not delete CAR with key "${cid}/__car" from S3`,
                 );
                 return badGateway("Could not upload data to IPFS");
             }

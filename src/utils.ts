@@ -8,7 +8,7 @@ import {
 } from "@ucanto/principal/ed25519";
 import { importDAG } from "@ucanto/core/delegation";
 import { CarReader } from "@ipld/car";
-import { S3Client } from "@aws-sdk/client-s3";
+import { S3 } from "@aws-sdk/client-s3";
 import pg, { type Client as PgClient } from "pg";
 import { randomBytes } from "crypto";
 import { isAddress, type Address } from "viem";
@@ -17,12 +17,9 @@ import { JWT_ISSUER, NONCE_LENGTH_BYTES, SCOPE_S3 } from "./constants";
 import { unauthorized } from "@hapi/boom";
 import { type ServerAuthScheme } from "@hapi/hapi";
 import { type Logger } from "pino";
-import * as jsonCodec from "multiformats/codecs/json";
-import { sha256 } from "multiformats/hashes/sha2";
-import { base32 } from "multiformats/bases/base32";
-import { CID } from "multiformats/cid";
-import { CAR } from "@web3-storage/upload-client";
-import type { CARFile } from "@web3-storage/upload-client/types";
+import { CAR, UnixFS } from "@web3-storage/upload-client";
+import type { CARFile, FileLike } from "@web3-storage/upload-client/types";
+import { Readable } from "node:stream";
 
 interface RequireEnvParams {
     name: string;
@@ -67,12 +64,12 @@ interface GetS3ClientParams {
     secretAccessKey: string;
 }
 
-export const getS3Client = ({
+export const getS3 = ({
     endpoint,
     accessKeyId,
     secretAccessKey,
-}: GetS3ClientParams): S3Client => {
-    return new S3Client({
+}: GetS3ClientParams): S3 => {
+    return new S3({
         region: "us-east-1",
         endpoint,
         credentials: {
@@ -281,20 +278,37 @@ interface JSONToCARParams {
     json: object;
 }
 
-interface JSONToCARReturnValue {
+interface CARReturnValue {
     cid: string;
     car: CARFile;
 }
 
 export const ipfsEncodeJSON = async ({
     json,
-}: JSONToCARParams): Promise<JSONToCARReturnValue> => {
-    const bytes = jsonCodec.encode(json);
-    const digest = await sha256.digest(bytes);
-    const cid = CID.createV1(jsonCodec.code, digest);
+}: JSONToCARParams): Promise<CARReturnValue> => {
+    const encodedJSON = await UnixFS.encodeFile(
+        new Blob([JSON.stringify(json)]),
+    );
+    const car = await CAR.encode(encodedJSON.blocks, encodedJSON.cid);
+    return { cid: encodedJSON.cid.toString(), car };
+};
 
-    return {
-        cid: cid.toString(base32),
-        car: await CAR.encode([{ cid, bytes }]),
-    };
+interface DirectoryToCARParams {
+    directory: Record<string, Readable>;
+}
+
+export const ipfsEncodeDirectory = async ({
+    directory,
+}: DirectoryToCARParams): Promise<CARReturnValue> => {
+    const streamableFiles = Object.entries(directory).map<FileLike>(
+        ([fileName, readable]) => {
+            return {
+                name: fileName,
+                stream: () => Readable.toWeb(readable),
+            };
+        },
+    );
+    const encodedDirectory = await UnixFS.encodeDirectory(streamableFiles);
+    const car = await CAR.encode(encodedDirectory.blocks, encodedDirectory.cid);
+    return { cid: encodedDirectory.cid.toString(), car };
 };
