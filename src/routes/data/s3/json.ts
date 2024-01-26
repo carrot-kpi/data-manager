@@ -1,20 +1,21 @@
 import { badGateway } from "@hapi/boom";
 import joi from "joi";
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { S3 } from "@aws-sdk/client-s3";
 import type { ServerRoute } from "@hapi/hapi";
 import { Readable } from "node:stream";
-import { ipfsEncodeJSON } from "../../utils.js";
-import { SCOPE_S3 } from "../../constants.js";
+import { ipfsEncodeJSON } from "../../../utils.js";
+import { SCOPE_S3 } from "../../../constants.js";
+import { Upload } from "@aws-sdk/lib-storage";
 
-interface GetDataRoutesParams {
-    s3Client: S3Client;
-    s3Bucket: string;
+interface GetS3DataJSONRouteParams {
+    s3: S3;
+    s3BucketName: string;
 }
 
-export const getS3DataRoute = async ({
-    s3Client,
-    s3Bucket,
-}: GetDataRoutesParams): Promise<ServerRoute> => {
+export const getS3DataJSONRoute = async ({
+    s3,
+    s3BucketName,
+}: GetS3DataJSONRouteParams): Promise<ServerRoute> => {
     return {
         method: "POST",
         path: "/data/s3/json",
@@ -66,12 +67,14 @@ export const getS3DataRoute = async ({
                             ),
                     })
                     .unknown(),
-                payload: joi.object({
-                    data: joi
-                        .object()
-                        .required()
-                        .description("The JSON object to store."),
-                }),
+                payload: joi
+                    .object({
+                        data: joi
+                            .object()
+                            .required()
+                            .description("The JSON object to store."),
+                    })
+                    .required(),
             },
         },
         handler: async (request, h) => {
@@ -80,29 +83,34 @@ export const getS3DataRoute = async ({
             const { cid, car } = await ipfsEncodeJSON({ json: data });
 
             try {
-                const put = new PutObjectCommand({
-                    Bucket: s3Bucket,
-                    Key: `${cid}-car`,
-                    Body: Readable.fromWeb(car.stream()),
-                    ContentLength: car.size,
-                    ContentType: "application/vnd.ipld.car",
-                    Tagging: "CarrotTemplate=false&CarrotLimbo=true",
+                const upload = new Upload({
+                    client: s3,
+                    params: {
+                        Bucket: s3BucketName,
+                        Key: `${cid}/__car`,
+                        Body: Readable.fromWeb(car.stream()),
+                        ContentType: "application/vnd.ipld.car",
+                        Tagging: "CarrotTemplate=false&CarrotLimbo=true",
+                    },
                 });
-                await s3Client.send(put);
+                await upload.done();
             } catch (error) {
                 request.logger.error(error, "Could not upload CAR to S3");
                 return badGateway("Could not upload data to S3");
             }
 
             try {
-                const put = new PutObjectCommand({
-                    Bucket: s3Bucket,
-                    Body: dataString,
-                    Key: cid,
-                    ContentType: "application/json",
-                    Tagging: "CarrotTemplate=false&CarrotLimbo=true",
+                const upload = new Upload({
+                    client: s3,
+                    params: {
+                        Bucket: s3BucketName,
+                        Key: cid,
+                        Body: dataString,
+                        ContentType: "application/json",
+                        Tagging: "CarrotTemplate=false&CarrotLimbo=true",
+                    },
                 });
-                await s3Client.send(put);
+                await upload.done();
             } catch (error) {
                 request.logger.error(error, "Could not upload raw data to S3");
                 return badGateway("Could not upload data to S3");

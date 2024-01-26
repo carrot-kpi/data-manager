@@ -12,6 +12,7 @@
         "lint": "eslint --ext .js ./ && prettier --check './**/*.{json,md}'",
         "format": "eslint --fix --ext .js ./ && prettier --write './**/*.{json,md}'",
         "generate-jwt": "tsx scripts/generate-jwt.ts",
+        "upload-folder": "tsx scripts/upload-folder.ts",
         "build": "esbuild ./src/index.ts --platform=node --format=esm --define:process.env.NODE_ENV=\\\"production\\\" --bundle --packages=external --minify --outdir=./out --out-extension:.js=.mjs",
         "dev": "nodemon --exec tsx src/index.ts"
     },
@@ -35,7 +36,8 @@
         "typescript": "^5.3.3"
     },
     "dependencies": {
-        "@aws-sdk/client-s3": "^3.490.0",
+        "@aws-sdk/client-s3": "^3.499.0",
+        "@aws-sdk/lib-storage": "^3.499.0",
         "@hapi/boom": "^10.0.1",
         "@hapi/hapi": "^21.3.2",
         "@hapi/inert": "^7.1.0",

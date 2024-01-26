@@ -226,6 +226,18 @@ pnpm generate-jwt $SCOPE
 
 Where `$SCOPE` is the scope/role you want the generated JWT to have.
 
+If you instead want to test the `/data/s3/templates` API to upload templates to
+limbo storage, you need to use the `./scripts/upload-folder.ts` script. This is
+because Swagger UI doesn't really support multi-file or directory uploads so the
+only way is to have the server running locally and launch the script. By
+default, it will upload whatever is in the `/upload-test` folder. The folder is
+ignored by `git` so you can test various different scenarios. To launch the
+script execute:
+
+```
+pnpm upload-folder
+```
+
 ## OpenAPI
 
 The OpenAPI specification is exposed under `/swagger.json`, while the Swagger UI
