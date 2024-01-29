@@ -238,6 +238,35 @@ script execute:
 pnpm upload-folder
 ```
 
+### Uploading existing CIDs to S3
+
+The script under `/scripts/upload-existing-cids-on-s3.ts` takes care of
+detecting all the CIDs used across the Carrot protocol and uploading them to the
+S3 limbo/persistent storage. It works with underlying data encoded in both raw
+JSON and DAG PB `multicodec` formats with the option of adding more supported
+codecs if needed, and it also works across chains. It requires a few env
+variables in order to be ran:
+
+- `S3_BUCKET`: the name of the S3 bucket to which to upload the data.
+- `S3_ENDPOINT (optional)`: the endpoint of the S3 bucket to which to upload the
+  data.
+- `S3_ACCESS_KEY_ID`: an AWS access key id with the correct permission policies
+  attached to it to upload data to the target bucket.
+- `S3_SECRET_ACCESS_KEY`: the secret key associated with the specified access
+  key id.
+
+You can put these env in the same `.env` file you use to run the server in dev
+mode and you can also test the script against a local S3 deployment in the same
+way (by bootstrapping MinIO through the provided Docker Compose file and putting
+the right values in the `.env` file).
+
+To launch the script just execute the following command in your terminal from
+the root of the repo:
+
+```
+pnpm upload-existing-cids-on-s3
+```
+
 ## OpenAPI
 
 The OpenAPI specification is exposed under `/swagger.json`, while the Swagger UI
