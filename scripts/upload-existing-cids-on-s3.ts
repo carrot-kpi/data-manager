@@ -15,7 +15,6 @@ import mime from "mime";
 
 dotenvConfig();
 
-const IPFS_GATEWAY_URL = "https://w3s.link";
 const DEFILLAMA_ORACLE_ABI = [
     {
         type: "function",
@@ -136,9 +135,10 @@ const fetchCids = async (): Promise<{ cid: string; template: boolean }[]> => {
 
 const handleJsonCid = async (
     cid: string,
+    parsedCid: CID,
 ): Promise<{ objectKey: string; data: Readable; contentType: string }[]> => {
     const response = await fetch(
-        `${IPFS_GATEWAY_URL}/ipfs/${cid}?download=true&format=raw`,
+        `https://${parsedCid.toV1()}.ipfs.dweb.link/?download=true&format=raw`,
     );
     if (!response || !response.body)
         throw new Error(
@@ -147,7 +147,7 @@ const handleJsonCid = async (
     return [
         {
             objectKey: cid,
-            data: Readable.fromWeb(response.body as unknown as any),
+            data: Readable.fromWeb(response.body as any),
             contentType: "application/json",
         },
     ];
@@ -155,24 +155,25 @@ const handleJsonCid = async (
 
 const handleDagPbCid = async (
     cid: string,
+    parsedCid: CID,
 ): Promise<{ objectKey: string; data: Readable; contentType: string }[]> => {
     const response = await fetch(
-        `https://w3s.link/ipfs/${cid}?download=true&format=car`,
+        `https://${parsedCid.toV1()}.ipfs.dweb.link/?download=true&format=car`,
     );
     if (!response || !response.body)
         throw new Error(
             `Could not fetch CAR data for CID ${cid}: ${await response.text()}`,
         );
 
-    const body = new Uint8Array(await response.arrayBuffer());
-
-    const car = await CarReader.fromBytes(body);
-    const roots = await car.getRoots();
+    const carReader = await CarReader.fromIterable(
+        Readable.fromWeb(response.body as any),
+    );
+    const roots = await carReader.getRoots();
     if (roots.length === 0 || roots.length > 1)
         throw new Error(`Zero or more than one root for cid ${cid}`);
 
     const blockstore = new MemoryBlockstore();
-    for await (const block of car.blocks()) {
+    for await (const block of carReader.blocks()) {
         blockstore.put(block.cid, block.bytes);
     }
 
@@ -201,10 +202,10 @@ const handleCid = async (
     const parsedCid = CID.parse(cid);
     switch (parsedCid.code) {
         case 512: {
-            return handleJsonCid(cid);
+            return handleJsonCid(cid, parsedCid);
         }
         case 112: {
-            return handleDagPbCid(cid);
+            return handleDagPbCid(cid, parsedCid);
         }
         default: {
             throw new Error(`Unsupported codec ${parsedCid.code} used`);
