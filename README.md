@@ -243,11 +243,12 @@ pnpm upload-folder
 The script under `/scripts/upload-existing-cids-on-s3.ts` takes care of
 detecting all the CIDs used across the Carrot protocol and uploading them to the
 S3 limbo/persistent storage. It works with underlying data encoded in both raw
-JSON and DAG PB `multicodec` formats with the option of adding more supported
-codecs if needed, and it also works across chains. It requires a few env
-variables in order to be ran:
+JSON and MerkleDAG PB `multicodec` formats with the option of adding more
+supported codecs if needed, and it also works across chains. It requires a few
+env variables in order to be ran:
 
 - `S3_BUCKET`: the name of the S3 bucket to which to upload the data.
+- `S3_REGION`: the region in which the S3 bucket is available.
 - `S3_ENDPOINT (optional)`: the endpoint of the S3 bucket to which to upload the
   data.
 - `S3_ACCESS_KEY_ID`: an AWS access key id with the correct permission policies
@@ -255,10 +256,11 @@ variables in order to be ran:
 - `S3_SECRET_ACCESS_KEY`: the secret key associated with the specified access
   key id.
 
-You can put these env in the same `.env` file you use to run the server in dev
-mode and you can also test the script against a local S3 deployment in the same
-way (by bootstrapping MinIO through the provided Docker Compose file and putting
-the right values in the `.env` file).
+You need to put these envs in a separate `.env.upload-existing-cids-on-s3` file
+and you can also test the script against a local S3 deployment in the same way
+it's possible to do it with the development server (by bootstrapping MinIO
+through the provided Docker Compose file and putting the right values in the
+`.env.upload-existing-cids-on-s3` file).
 
 To launch the script just execute the following command in your terminal from
 the root of the repo:

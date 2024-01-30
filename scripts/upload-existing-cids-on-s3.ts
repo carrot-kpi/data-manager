@@ -13,7 +13,7 @@ import { Address, Chain, createPublicClient, http } from "viem";
 import { gnosis, polygonMumbai, scrollSepolia, sepolia } from "viem/chains";
 import mime from "mime";
 
-dotenvConfig();
+dotenvConfig({ path: ".env.upload-existing-cids-on-s3" });
 
 const DEFILLAMA_ORACLE_ABI = [
     {
@@ -32,10 +32,11 @@ const CHAIN: Record<ChainId, Chain> = {
 };
 
 const bucketName = requireEnv({ name: "S3_BUCKET" });
-console.log(`Using bucket name ${bucketName}`);
+const bucketRegion = requireEnv({ name: "S3_REGION" });
+console.log(`Using bucket name ${bucketName} in region ${bucketRegion}`);
 
 const s3 = new S3({
-    region: "us-east-1",
+    region: bucketRegion,
     endpoint: process.env.S3_ENDPOINT,
     credentials: {
         accessKeyId: requireEnv({ name: "S3_ACCESS_KEY_ID" }),

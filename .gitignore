@@ -136,7 +136,8 @@ terraform/*.json
 *.out
 tfplan
 
-.env
+.env*
+!.env.example
 build
 .compose
 .turbo
