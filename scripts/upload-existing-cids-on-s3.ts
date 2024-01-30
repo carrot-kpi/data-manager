@@ -11,6 +11,7 @@ import { Upload } from "@aws-sdk/lib-storage";
 import { Readable } from "node:stream";
 import { Address, Chain, createPublicClient, http } from "viem";
 import { gnosis, polygonMumbai, scrollSepolia, sepolia } from "viem/chains";
+import mime from "mime";
 
 dotenvConfig();
 
@@ -135,7 +136,7 @@ const fetchCids = async (): Promise<{ cid: string; template: boolean }[]> => {
 
 const handleJsonCid = async (
     cid: string,
-): Promise<{ objectKey: string; data: Readable }[]> => {
+): Promise<{ objectKey: string; data: Readable; contentType: string }[]> => {
     const response = await fetch(
         `${IPFS_GATEWAY_URL}/ipfs/${cid}?download=true&format=raw`,
     );
@@ -147,13 +148,14 @@ const handleJsonCid = async (
         {
             objectKey: cid,
             data: Readable.fromWeb(response.body as unknown as any),
+            contentType: "application/json",
         },
     ];
 };
 
 const handleDagPbCid = async (
     cid: string,
-): Promise<{ objectKey: string; data: Readable }[]> => {
+): Promise<{ objectKey: string; data: Readable; contentType: string }[]> => {
     const response = await fetch(
         `https://w3s.link/ipfs/${cid}?download=true&format=car`,
     );
@@ -174,7 +176,11 @@ const handleDagPbCid = async (
         blockstore.put(block.cid, block.bytes);
     }
 
-    const entries: { objectKey: string; data: Readable }[] = [];
+    const entries: {
+        objectKey: string;
+        data: Readable;
+        contentType: string;
+    }[] = [];
     for await (const entry of recursive(cid, blockstore)) {
         if (entry.type === "directory") {
             continue;
@@ -182,6 +188,7 @@ const handleDagPbCid = async (
         entries.push({
             objectKey: entry.path,
             data: Readable.from(entry.content()),
+            contentType: mime.getType(entry.name) || "application/octet-stream",
         });
     }
 
@@ -190,7 +197,7 @@ const handleDagPbCid = async (
 
 const handleCid = async (
     cid: string,
-): Promise<{ objectKey: string; data: Readable }[]> => {
+): Promise<{ objectKey: string; data: Readable; contentType: string }[]> => {
     const parsedCid = CID.parse(cid);
     switch (parsedCid.code) {
         case 512: {
@@ -218,6 +225,7 @@ const main = async () => {
                     Bucket: bucketName,
                     Key: upload.objectKey,
                     Body: upload.data,
+                    ContentType: upload.contentType,
                     Tagging: `CarrotTemplate=${template}&CarrotLimbo=false`,
                 },
             }).done();
