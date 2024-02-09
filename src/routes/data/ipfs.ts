@@ -6,6 +6,9 @@ import type { ServerRoute } from "@hapi/hapi";
 import type { Client as W3UpClient } from "@web3-storage/w3up-client";
 import { SCOPE_IPFS } from "../../constants";
 import { CID } from "multiformats/cid";
+import type { StoreGetFailure } from "@web3-storage/upload-client/types";
+import type { Error } from "@ucanto/core/schema";
+import { isStoreItemNotFound } from "../../utils";
 
 interface GetDataRoutesParams {
     s3: S3;
@@ -89,6 +92,21 @@ export const getIPFSDataRoute = async ({
             } catch (error) {
                 request.logger.error(error, `Could not parse CID ${cid}`);
                 return badGateway("Could not upload data to IPFS");
+            }
+
+            // Check if data is already on IPFS
+            try {
+                await w3UpClient.capability.store.get(parsedCid);
+                throw new Error(
+                    `Data with CID ${cid} already existing on IPFS`,
+                );
+            } catch (error: any) {
+                if (error.cause && error.cause.name === "StoreItemNotFound")
+                    request.logger.info("Data not existing on IPFS yet");
+                else {
+                    request.logger.error(error, "Could not get data from IPFS");
+                    return badGateway("Could not upload data to IPFS");
+                }
             }
 
             // Fetch the raw CAR stream from S3
