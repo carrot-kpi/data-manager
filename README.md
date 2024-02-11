@@ -224,7 +224,8 @@ script under `./scripts/generate-jwt.ts`. You can call it using:
 pnpm generate-jwt $SCOPE
 ```
 
-Where `$SCOPE` is the scope/role you want the generated JWT to have.
+Where `$SCOPE` is the scope/role you want the generated JWT to have (use `ipfs`
+to test the `/data/ipfs` API, and `s3` for `/data/s3/json`).
 
 If you instead want to test the `/data/s3/templates` API to upload templates to
 limbo storage, you need to use the `./scripts/upload-folder.ts` script. This is

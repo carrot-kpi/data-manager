@@ -15,6 +15,6 @@ services:
       - 9000:9000
       - 9001:9001
     environment:
-      - MINIO_ROOT_USER=user
-      - MINIO_ROOT_PASSWORD=password
+      - MINIO_ROOT_USER=data-manager-test-access-key
+      - MINIO_ROOT_PASSWORD=data-manager-test-secret-key
       - MINIO_DEFAULT_BUCKETS=data-manager-test-bucket
