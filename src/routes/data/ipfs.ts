@@ -97,9 +97,7 @@ export const getIPFSDataRoute = async ({
             // Check if data is already on IPFS
             try {
                 await w3UpClient.capability.store.get(parsedCid);
-                throw new Error(
-                    `Data with CID ${cid} already existing on IPFS`,
-                );
+                return h.response({ cid }).code(200).type("application/json");
             } catch (error: any) {
                 if (error.cause && error.cause.name === "StoreItemNotFound")
                     request.logger.info("Data not existing on IPFS yet");
