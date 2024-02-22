@@ -6,9 +6,6 @@ import type { ServerRoute } from "@hapi/hapi";
 import type { Client as W3UpClient } from "@web3-storage/w3up-client";
 import { SCOPE_IPFS } from "../../constants";
 import { CID } from "multiformats/cid";
-import type { StoreGetFailure } from "@web3-storage/upload-client/types";
-import type { Error } from "@ucanto/core/schema";
-import { isStoreItemNotFound } from "../../utils";
 
 interface GetDataRoutesParams {
     s3: S3;
