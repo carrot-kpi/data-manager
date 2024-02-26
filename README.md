@@ -176,11 +176,18 @@ The env variables are:
 - `DB_CONNECTION_STRING`: a connection string to a Postgres database.
 - `JWT_SECRET`: the secret used to sign the issued JWTs. It's of utmost
   importance to keep this value secret.
-- `W3UP_PRINCIPAL_KEY`: a key identifying a principal that was previously
-  delegated by a w3up space owner to access the space itself.
-- `W3UP_DELEGATION_PROOF`: a proof that proves the delegation of `store` and
-  `upload` capabilities from a space owner to the previously given principal key
-  (the proof also contains the space the delegation was given on).
+- `DISABLE_IPFS_PERSISTENCE`: whether or not to actually upload data to IPFS on
+  persistence API calls. If this is `true`, the service will never upload any
+  data to IPFS and only work on S3.
+- `W3UP_PRINCIPAL_KEY (optional on condition)`: a key identifying a principal
+  that was previously delegated by a w3up space owner to access the space
+  itself. This can be left undefined if `DISABLE_IPFS_PERSISTENCE` is set to
+  `true`
+- `W3UP_DELEGATION_PROOF (optional on condition)`: a proof that proves the
+  delegation of `store` and `upload` capabilities from a space owner to the
+  previously given principal key (the proof also contains the space the
+  delegation was given on). This can be left undefined if
+  `DISABLE_IPFS_PERSISTENCE` is set to `true`
 - `S3_ENDPOINT (optional)`: an endpoint to an S3 server.
 - `S3_BUCKET`: the S3 bucket in which to store data.
 - `S3_ACCESS_KEY_ID`: the access key used to authenticate to the S3 API.

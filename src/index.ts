@@ -14,6 +14,7 @@ import HapiPinoPlugin from "hapi-pino";
 import HapiInertPlugin from "@hapi/inert";
 import HapiVisionPlugin from "@hapi/vision";
 import HapiSwaggerPlugin from "hapi-swagger";
+import { type Client as W3UpClient } from "@web3-storage/w3up-client";
 import { getLoginMessageRoute } from "./routes/login-message";
 import { getTokenRoute } from "./routes/token";
 import { getS3DataJSONRoute } from "./routes/data/s3/json.js";
@@ -21,6 +22,8 @@ import { getS3DataTemplatesRoute } from "./routes/data/s3/templates.js";
 import { getIPFSDataRoute } from "./routes/data/ipfs.js";
 
 const DEV = process.env.NODE_ENV !== "production";
+const DISABLE_IPFS_PERSISTENCE =
+    process.env.DISABLE_IPFS_PERSISTENCE === "true";
 
 const start = async () => {
     if (DEV) (await import("dotenv")).config();
@@ -73,12 +76,18 @@ const start = async () => {
         logger: server.logger,
     });
 
-    const W3UP_PRINCIPAL_KEY = requireEnv({ name: "W3UP_PRINCIPAL_KEY" });
-    const W3UP_DELEGATION_PROOF = requireEnv({ name: "W3UP_DELEGATION_PROOF" });
-    const w3UpClient = await getW3UpClient({
-        principalKey: W3UP_PRINCIPAL_KEY,
-        delegationProof: W3UP_DELEGATION_PROOF,
-    });
+    let w3UpClient: W3UpClient | undefined = undefined;
+    if (!DISABLE_IPFS_PERSISTENCE) {
+        const W3UP_PRINCIPAL_KEY = requireEnv({ name: "W3UP_PRINCIPAL_KEY" });
+        const W3UP_DELEGATION_PROOF = requireEnv({
+            name: "W3UP_DELEGATION_PROOF",
+        });
+        w3UpClient = await getW3UpClient({
+            principalKey: W3UP_PRINCIPAL_KEY,
+            delegationProof: W3UP_DELEGATION_PROOF,
+        });
+        console.log("Running with enabled IPFS persistence");
+    } else console.log("Running with disabled IPFS persistence");
 
     const S3_ENDPOINT = process.env.S3_ENDPOINT;
     const S3_BUCKET = requireEnv({ name: "S3_BUCKET" });
