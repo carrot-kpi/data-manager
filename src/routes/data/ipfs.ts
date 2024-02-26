@@ -10,7 +10,7 @@ import { CID } from "multiformats/cid";
 interface GetDataRoutesParams {
     s3: S3;
     s3BucketName: string;
-    w3UpClient: W3UpClient;
+    w3UpClient?: W3UpClient;
 }
 
 export const getIPFSDataRoute = async ({
@@ -91,48 +91,56 @@ export const getIPFSDataRoute = async ({
                 return badGateway("Could not upload data to IPFS");
             }
 
-            // Check if data is already on IPFS
-            try {
-                await w3UpClient.capability.store.get(parsedCid);
-                return h.response({ cid }).code(200).type("application/json");
-            } catch (error: any) {
-                if (error.cause && error.cause.name === "StoreItemNotFound")
-                    request.logger.info("Data not existing on IPFS yet");
-                else {
-                    request.logger.error(error, "Could not get data from IPFS");
+            if (w3UpClient) {
+                // Check if data is already on IPFS
+                try {
+                    await w3UpClient.capability.store.get(parsedCid);
+                    return h
+                        .response({ cid })
+                        .code(200)
+                        .type("application/json");
+                } catch (error: any) {
+                    if (error.cause && error.cause.name === "StoreItemNotFound")
+                        request.logger.info("Data not existing on IPFS yet");
+                    else {
+                        request.logger.error(
+                            error,
+                            "Could not get data from IPFS",
+                        );
+                        return badGateway("Could not upload data to IPFS");
+                    }
+                }
+
+                // Fetch the raw CAR stream from S3
+                let car: StreamingBlobPayloadOutputTypes;
+                try {
+                    const output = await s3.getObject({
+                        Bucket: s3BucketName,
+                        Key: `${cid}/__car`,
+                    });
+                    if (!output.Body)
+                        throw new Error(
+                            `Could not fetch object with key "${cid}/__car" from S3`,
+                        );
+                    car = output.Body;
+                } catch (error) {
+                    request.logger.error(error, "Could not fetch CAR from S3");
                     return badGateway("Could not upload data to IPFS");
                 }
-            }
 
-            // Fetch the raw CAR stream from S3
-            let car: StreamingBlobPayloadOutputTypes;
-            try {
-                const output = await s3.getObject({
-                    Bucket: s3BucketName,
-                    Key: `${cid}/__car`,
-                });
-                if (!output.Body)
-                    throw new Error(
-                        `Could not fetch object with key "${cid}/__car" from S3`,
-                    );
-                car = output.Body;
-            } catch (error) {
-                request.logger.error(error, "Could not fetch CAR from S3");
-                return badGateway("Could not upload data to IPFS");
-            }
-
-            // Upload the raw CAR on web3.storage
-            try {
-                const cidFromUpload = await w3UpClient.uploadCAR({
-                    stream: car.transformToWebStream,
-                });
-                if (!parsedCid.equals(cidFromUpload))
-                    throw new Error(
-                        `CID mismatch: got ${cidFromUpload.toV1().toString()}, expected ${cid}`,
-                    );
-            } catch (error) {
-                request.logger.error(error, "Could not upload CAR to IPFS");
-                return badGateway("Could not upload data to IPFS");
+                // Upload the raw CAR on web3.storage
+                try {
+                    const cidFromUpload = await w3UpClient.uploadCAR({
+                        stream: car.transformToWebStream,
+                    });
+                    if (!parsedCid.equals(cidFromUpload))
+                        throw new Error(
+                            `CID mismatch: got ${cidFromUpload.toV1().toString()}, expected ${cid}`,
+                        );
+                } catch (error) {
+                    request.logger.error(error, "Could not upload CAR to IPFS");
+                    return badGateway("Could not upload data to IPFS");
+                }
             }
 
             // Fetch the object's current "CarrotTemplate" tag
