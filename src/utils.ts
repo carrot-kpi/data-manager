@@ -294,21 +294,16 @@ export const ipfsEncodeJSON = async ({
 };
 
 interface DirectoryToCARParams {
-    directory: Record<string, Readable>;
+    directory: Record<string, Buffer>;
 }
 
 export const ipfsEncodeDirectory = async ({
     directory,
 }: DirectoryToCARParams): Promise<CARReturnValue> => {
-    const streamableFiles = Object.entries(directory).map<FileLike>(
-        ([fileName, readable]) => {
-            return {
-                name: fileName,
-                stream: () => Readable.toWeb(readable),
-            };
-        },
-    );
-    const encodedDirectory = await UnixFS.encodeDirectory(streamableFiles);
+    const files = Object.entries(directory).map<File>(([fileName, buffer]) => {
+        return new File([buffer], fileName);
+    });
+    const encodedDirectory = await UnixFS.encodeDirectory(files);
     const car = await CAR.encode(encodedDirectory.blocks, encodedDirectory.cid);
     return { cid: encodedDirectory.cid.toString(), car };
 };

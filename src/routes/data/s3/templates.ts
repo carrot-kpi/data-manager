@@ -60,7 +60,7 @@ export const getS3DataTemplatesRoute = async ({
                 allow: "multipart/form-data",
                 maxBytes: 5_000_000, // 5Mb
                 multipart: {
-                    output: "stream",
+                    output: "data",
                 },
                 parse: true,
                 timeout: 60000,
@@ -79,7 +79,7 @@ export const getS3DataTemplatesRoute = async ({
             },
         },
         handler: async (request, h) => {
-            const template = request.payload as Record<string, Readable>;
+            const template = request.payload as Record<string, Buffer>;
             for (let fileName of Object.keys(request.payload)) {
                 if (fileName === "/__car" || fileName === "__car") {
                     return badRequest(
