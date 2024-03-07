@@ -18,8 +18,7 @@ import { unauthorized } from "@hapi/boom";
 import { type ServerAuthScheme } from "@hapi/hapi";
 import { type Logger } from "pino";
 import { CAR, UnixFS } from "@web3-storage/upload-client";
-import type { CARFile, FileLike } from "@web3-storage/upload-client/types";
-import { Readable } from "node:stream";
+import type { CARFile } from "@web3-storage/upload-client/types";
 
 interface RequireEnvParams {
     name: string;
