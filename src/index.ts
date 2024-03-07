@@ -22,12 +22,12 @@ import { getS3DataTemplatesRoute } from "./routes/data/s3/templates.js";
 import { getIPFSDataRoute } from "./routes/data/ipfs.js";
 
 const DEV = process.env.NODE_ENV !== "production";
+if (DEV) (await import("dotenv")).config();
+
 const DISABLE_IPFS_PERSISTENCE =
     process.env.DISABLE_IPFS_PERSISTENCE === "true";
 
 const start = async () => {
-    if (DEV) (await import("dotenv")).config();
-
     const HOST = requireEnv({ name: "HOST" });
     const PORT = requireEnv({ name: "PORT" });
     const server = createServer({
