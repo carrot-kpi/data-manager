@@ -1,6 +1,6 @@
 import { badGateway } from "@hapi/boom";
 import joi from "joi";
-import { S3 } from "@aws-sdk/client-s3";
+import { S3, type Tag } from "@aws-sdk/client-s3";
 import { type StreamingBlobPayloadOutputTypes } from "@smithy/types";
 import type { ServerRoute } from "@hapi/hapi";
 import type { Client as W3UpClient } from "@web3-storage/w3up-client";
@@ -144,50 +144,102 @@ export const getIPFSDataRoute = async ({
             }
 
             // Fetch the object's current "CarrotTemplate" tag
-            let templateTag;
+            let templateTag: Tag | undefined;
             try {
                 const tags = await s3.getObjectTagging({
                     Bucket: s3BucketName,
-                    Key: cid,
+                    Key: `${cid}/__car`,
                 });
                 templateTag = tags.TagSet?.find(
                     (tag) => tag.Key === "CarrotTemplate",
                 );
                 if (!templateTag)
                     throw new Error(
-                        `No "CarrotTemplate" tag on object with key "${cid}" on S3`,
+                        `No "CarrotTemplate" tag on object with key "${cid}/__car" on S3`,
                     );
             } catch (error) {
                 request.logger.error(
                     error,
-                    `Could not get "CarrotTemplate" tag for object with key "${cid}"`,
+                    `Could not get "CarrotTemplate" tag for object with key "${cid}/__car"`,
                 );
                 return badGateway("Could not upload data to IPFS");
             }
 
-            // Set the content associated with the CAR as non removable.
-            // This way the lifecycle rule that removes non persisted objects
-            // from the target bucket won't delete this item
-            try {
-                await s3.putObjectTagging({
-                    Bucket: s3BucketName,
-                    Key: cid,
-                    Tagging: {
-                        TagSet: [
-                            templateTag,
-                            {
-                                Key: "CarrotLimbo",
-                                Value: "false",
-                            },
-                        ],
-                    },
-                });
-            } catch (error) {
-                request.logger.error(
-                    error,
-                    `Could not set object with key "${cid}" as non removable on S3`,
-                );
-                return badGateway("Could not upload data to IPFS");
+            if (templateTag.Value === "true") {
+                // Fetch the objects inside the template folder and for each one of them
+                // set CarrotLimbo to false
+                let objects;
+                try {
+                    objects = await s3.listObjectsV2({
+                        Bucket: s3BucketName,
+                        Prefix: `${cid}/`,
+                    });
+                    if (!objects.Contents)
+                        throw new Error("Object contents is undefined");
+                } catch (error) {
+                    request.logger.error(
+                        error,
+                        `Could not list objects with prefix "${cid}/"`,
+                    );
+                    return badGateway("Could not upload data to IPFS");
+                }
+
+                try {
+                    await Promise.all(
+                        objects.Contents.map(async (object) => {
+                            try {
+                                return s3.putObjectTagging({
+                                    Bucket: s3BucketName,
+                                    Key: object.Key,
+                                    Tagging: {
+                                        TagSet: [
+                                            templateTag as Tag,
+                                            {
+                                                Key: "CarrotLimbo",
+                                                Value: "false",
+                                            },
+                                        ],
+                                    },
+                                });
+                            } catch (error) {
+                                throw new Error(
+                                    `Could not set object with key "${object.Key}" as non removable on S3`,
+                                );
+                            }
+                        }),
+                    );
+                } catch (error) {
+                    request.logger.error(
+                        error,
+                        "Could not set object as non removable on S3",
+                    );
+                    return badGateway("Could not upload data to IPFS");
+                }
+            } else {
+                // Set the content associated with the CAR as non removable.
+                // This way the lifecycle rule that removes non persisted objects
+                // from the target bucket won't delete this item
+                try {
+                    await s3.putObjectTagging({
+                        Bucket: s3BucketName,
+                        Key: cid,
+                        Tagging: {
+                            TagSet: [
+                                templateTag,
+                                {
+                                    Key: "CarrotLimbo",
+                                    Value: "false",
+                                },
+                            ],
+                        },
+                    });
+                } catch (error) {
+                    request.logger.error(
+                        error,
+                        `Could not set object with key "${cid}" as non removable on S3`,
+                    );
+                    return badGateway("Could not upload data to IPFS");
+                }
             }
 
             // Manually delete the CAR and its folder object from S3 now that it's uploaded
