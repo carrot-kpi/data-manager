@@ -61,7 +61,7 @@ async function main() {
                     Bucket: toBucketName,
                     Key: object.Key,
                 });
-                console.log(`[${i}] - ${object.Key} copied`);
+                console.log(`[${i}] - ${object.Key} already copied`);
                 continue;
             } catch (ignore) {}
 
