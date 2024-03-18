@@ -14,6 +14,7 @@
         "generate-jwt": "tsx scripts/generate-jwt.ts",
         "upload-folder": "tsx scripts/upload-folder.ts",
         "upload-existing-cids-on-s3": "tsx scripts/upload-existing-cids-on-s3.ts",
+        "copy-bucket": "tsx scripts/copy-bucket.ts",
         "build": "esbuild ./src/index.ts --platform=node --format=esm --define:process.env.NODE_ENV=\\\"production\\\" --bundle --packages=external --minify --outdir=./out --out-extension:.js=.mjs",
         "dev": "nodemon --exec tsx src/index.ts"
     },

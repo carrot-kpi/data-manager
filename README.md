@@ -277,6 +277,32 @@ the root of the repo:
 pnpm upload-existing-cids-on-s3
 ```
 
+### Copying objects from one bucket to another
+
+The script under `/scripts/copy-bucket.ts` takes care of copying all objects
+from a bucket A to a bucket B. It requires a few env variables in order to be
+ran:
+
+- `FROM_BUCKET_NAME`: the name of the S3 bucket from which to copy the objects.
+- `FROM_BUCKET_ACCESS_KEY_ID`: an AWS access key id with the correct permission
+  policies attached to it to copy data from the source bucket.
+- `FROM_BUCKET_SECRET_ACCESS_KEY`: the secret key associated with the specified
+  from bucket access key id.
+- `TO_BUCKET_NAME`: the name of the S3 bucket to which to copy the objects.
+- `TO_BUCKET_ACCESS_KEY_ID`: an AWS access key id with the correct permission
+  policies attached to it to copy data to the bucket.
+- `TO_BUCKET_SECRET_ACCESS_KEY`: the secret key associated with the specified to
+  bucket access key id.
+
+You need to put these envs in a separate `.env.copy-bucket` file.
+
+To launch the script just execute the following command in your terminal from
+the root of the repo:
+
+```
+pnpm copy-bucket
+```
+
 ## OpenAPI
 
 The OpenAPI specification is exposed under `/swagger.json`, while the Swagger UI
